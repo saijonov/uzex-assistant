@@ -87,6 +87,46 @@ TRANSLITERATION = str.maketrans(
         "ҳ": "h",
     }
 )
+PROMPT_VALUE_COLUMNS = {
+    "registry": (
+        "status",
+        "currency",
+        "unit",
+        "contract_type",
+        "contract_form",
+        "auction_type",
+        "region",
+        "category",
+        "product_group",
+        "industry",
+        "delivery_basis",
+        "packaging",
+    ),
+    "participants": ("role", "activity", "vat_payer"),
+}
+ENFORCED_VALUE_COLUMNS = {
+    "registry": (
+        "region_ru",
+        "seller_region",
+        "buyer_region",
+        "seller_vat_payer",
+        "buyer_vat_payer",
+        "product",
+        "product_family",
+        "product_name",
+        "seller_name",
+        "buyer_name",
+        "seller_activity",
+        "buyer_activity",
+        "seller_broker_name",
+        "buyer_broker_name",
+        "seller_broker_region",
+        "buyer_broker_region",
+    ),
+    "broker_deals": ("broker_side", "broker_name", "broker_region"),
+    "participants": ("region", "name"),
+    "brokers": ("region", "name"),
+}
 PRODUCT_ALIASES = {
     "shakar": "Сахар",
     "oq shakar": "Сахар белый",
@@ -257,6 +297,57 @@ class Database:
                 for table in sorted(TABLES)
             }
             self.catalog = self._catalog(db)
+            self.values = self._column_values(db, PROMPT_VALUE_COLUMNS)
+            self.known_values = {column: set(values) for column, values in self.values.items()}
+            for column, values in self._column_values(db, ENFORCED_VALUE_COLUMNS).items():
+                self.known_values.setdefault(column, set()).update(values)
+
+    def _column_values(self, db, columns: dict[str, tuple[str, ...]]) -> dict[str, list[str]]:
+        values: dict[str, list[str]] = {}
+        for table, names in columns.items():
+            present = {column[0] for column in self.schema.get(table, [])}
+            for name in names:
+                if name not in present:
+                    continue
+                rows = db.execute(
+                    f"SELECT DISTINCT {name} FROM {table} WHERE {name} IS NOT NULL ORDER BY 1"
+                ).fetchall()
+                merged = set(values.get(name, [])) | {str(row[0]) for row in rows}
+                values[name] = sorted(merged)
+        return values
+
+    def check_filter_values(self, tree: exp.Select) -> None:
+        for node in tree.find_all(exp.EQ, exp.NEQ, exp.In, exp.Like, exp.ILike):
+            target = node.this
+            folded = isinstance(node, exp.ILike)
+            while isinstance(target, (exp.Lower, exp.Upper, exp.Paren)):
+                folded = folded or not isinstance(target, exp.Paren)
+                target = target.this
+            if not isinstance(target, exp.Column) or target.name not in self.known_values:
+                continue
+            known = self.known_values[target.name]
+            operands = node.expressions if isinstance(node, exp.In) else [node.expression]
+            for operand in operands:
+                if not isinstance(operand, exp.Literal) or not operand.is_string:
+                    continue
+                if isinstance(node, (exp.Like, exp.ILike)):
+                    pattern = re.escape(operand.name).replace("%", ".*").replace("_", ".")
+                    flags = re.IGNORECASE | re.DOTALL if folded else re.DOTALL
+                    matched = any(re.fullmatch(pattern, value, flags) for value in known)
+                elif folded:
+                    matched = operand.name.casefold() in {value.casefold() for value in known}
+                else:
+                    matched = operand.name in known
+                if not matched:
+                    hint = (
+                        f"Real values: {sorted(known)}"
+                        if len(known) <= 30
+                        else "Use lookup_entities to find the real source strings"
+                    )
+                    raise ValueError(
+                        f"No record has {target.name} matching {operand.name!r}. {hint}. "
+                        "Correct the filter; this rejection is not evidence of absence."
+                    )
 
     def connect(self):
         return duckdb.connect(
@@ -317,6 +408,7 @@ class Database:
 
     def sample(self, sql: str, count: int, query_id: str, timeout: float = 8) -> Evidence:
         tree, table = validate_query(sql)
+        self.check_filter_values(tree)
         if not 1 <= count <= 100:
             raise ValueError("Sample size must be between 1 and 100")
         if tree.find(exp.AggFunc) or any(
@@ -354,6 +446,7 @@ class Database:
 
     def query(self, sql: str, query_id: str, timeout: float = 8) -> Evidence:
         tree, table = validate_query(sql)
+        self.check_filter_values(tree)
         row_limit = ROW_LIMITS[table]
         if not tree.args.get("limit"):
             tree = tree.limit(row_limit + 1)

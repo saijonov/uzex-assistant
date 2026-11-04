@@ -153,7 +153,9 @@ class Engine:
             response = await self.client.responses.create(
                 model=self.settings.openai_model,
                 reasoning={"effort": self.settings.openai_reasoning_effort},
-                instructions=instructions(self.database.schema, self.database.manifest, language),
+                instructions=instructions(
+                    self.database.schema, self.database.manifest, language, self.database.values
+                ),
                 tools=TOOLS,
                 input=messages,
                 parallel_tool_calls=False,

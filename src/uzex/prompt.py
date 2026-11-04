@@ -3,7 +3,9 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 
-def instructions(schema: dict, manifest: dict, language: str | None = None) -> str:
+def instructions(
+    schema: dict, manifest: dict, language: str | None = None, values: dict | None = None
+) -> str:
     today = datetime.now(ZoneInfo("Asia/Tashkent")).date().isoformat()
     return f"""You interpret Uzbek and Russian questions about a fictional exchange registry.
 You cannot answer factual questions from memory. Use tools and finish with grounded evidence.
@@ -15,6 +17,11 @@ requests another answer language in that question. The Telegram menu language is
 An explicit answer-language override from the caller is: {language or "none"}.
 For a short language-neutral follow-up, retain the language of the previous answer.
 SCHEMA (all approved relations): {json.dumps(schema, ensure_ascii=False)}
+REAL FILTER VALUES (exact source strings, Russian even for Uzbek questions):
+{json.dumps(values or {}, ensure_ascii=False)}
+A filter using any other value is rejected: pick the real string. Dollars means
+currency='Доллар США' and so'm means currency='Узбекский сум', never 'USD' or 'UZS'.
+An amount 'in dollars' is SUM(amount) WHERE currency='Доллар США', which covers USD contracts only.
 
 FIRST STEP: always call review_request. This is required before every data or lookup tool.
 Interpret the latest question together with conversation context and any unresolved request.
