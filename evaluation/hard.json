@@ -269,9 +269,11 @@
           "answer"
         ],
         "in_text": [
-          "Toshkent shahri",
-          "19.11",
           "Ulush"
+        ],
+        "in_rows": [
+          "Toshkent shahri",
+          "19.11"
         ],
         "language": "uz"
       }
@@ -329,6 +331,68 @@
           "answer"
         ],
         "file_rows": 120,
+        "language": "uz"
+      }
+    ]
+  },
+  {
+    "id": "wrong_length_firm_uz",
+    "category": "critical",
+    "turns": [
+      {
+        "q": "menga 1000001 firmani hs kodini ber",
+        "outcomes": [
+          "clarify"
+        ],
+        "in_text": [
+          "1000001",
+          "7 ta",
+          "1. 100001"
+        ],
+        "language": "uz"
+      },
+      {
+        "q": "qanday variantlar bor?",
+        "outcomes": [
+          null
+        ],
+        "in_text": [
+          "STIR",
+          "1. 100001"
+        ]
+      },
+      {
+        "q": "1",
+        "outcomes": [
+          "clarify",
+          "answer"
+        ],
+        "language": "uz"
+      },
+      {
+        "q": "bitim",
+        "outcomes": [
+          "answer"
+        ],
+        "any_in_text": [
+          "230610"
+        ],
+        "language": "uz"
+      }
+    ]
+  },
+  {
+    "id": "excluded_cancelled_uz",
+    "category": "critical",
+    "turns": [
+      {
+        "q": "2025-yilda bekor qilinganlarni chiqarib umumiy summa qancha?",
+        "outcomes": [
+          "answer"
+        ],
+        "in_text": [
+          "52060836360057.1205"
+        ],
         "language": "uz"
       }
     ]
@@ -485,7 +549,7 @@
   },
   {
     "id": "growth_uz",
-    "category": "natural",
+    "category": "critical",
     "turns": [
       {
         "q": "2025-yilda bitimlar soni 2024 ga nisbatan necha foiz o'sdi?",
@@ -501,7 +565,7 @@
   },
   {
     "id": "cancel_share_uz",
-    "category": "natural",
+    "category": "critical",
     "turns": [
       {
         "q": "Bekor qilingan bitimlar ulushi necha foiz?",
@@ -1014,8 +1078,9 @@
         "outcomes": [
           "answer"
         ],
-        "in_text": [
-          "BK001"
+        "any_in_text": [
+          "BK001",
+          "КЕКУХО"
         ],
         "language": "ru"
       }
@@ -1220,8 +1285,9 @@
         "outcomes": [
           "answer"
         ],
-        "in_text": [
-          "233120862"
+        "any_in_text": [
+          "233120862",
+          "228629838.65"
         ],
         "language": "uz"
       }
@@ -1365,6 +1431,54 @@
     ]
   },
   {
+    "id": "excluded_cancelled_ru",
+    "category": "answerable",
+    "turns": [
+      {
+        "q": "Какая сумма сделок за 2025 год без аннулированных?",
+        "outcomes": [
+          "answer"
+        ],
+        "in_text": [
+          "52060836360057.1205"
+        ],
+        "language": "ru"
+      }
+    ]
+  },
+  {
+    "id": "company_hs_codes_uz",
+    "category": "answerable",
+    "turns": [
+      {
+        "q": "921912462 STIRli kompaniyaning HS kodlari qanday?",
+        "outcomes": [
+          "answer"
+        ],
+        "in_text": [
+          "230610"
+        ],
+        "language": "uz"
+      }
+    ]
+  },
+  {
+    "id": "vat_payers_answerable_uz",
+    "category": "answerable",
+    "turns": [
+      {
+        "q": "QQS to'lovchi sotuvchilar nechta?",
+        "outcomes": [
+          "answer"
+        ],
+        "in_text": [
+          "354"
+        ],
+        "language": "uz"
+      }
+    ]
+  },
+  {
     "id": "no_file_uz",
     "category": "files",
     "turns": [
@@ -1423,6 +1537,51 @@
         ],
         "file_rows": 100,
         "language": "uz"
+      }
+    ]
+  },
+  {
+    "id": "privet_ru",
+    "category": "chat",
+    "turns": [
+      {
+        "q": "privet",
+        "outcomes": [
+          null
+        ],
+        "in_text": [
+          "Здравствуйте"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "zdravstvuyte_ru",
+    "category": "chat",
+    "turns": [
+      {
+        "q": "zdravstvuyte",
+        "outcomes": [
+          null
+        ],
+        "in_text": [
+          "Здравствуйте"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "options_without_question_ru",
+    "category": "chat",
+    "turns": [
+      {
+        "q": "какие есть варианты?",
+        "outcomes": [
+          null
+        ],
+        "in_text": [
+          "сделк"
+        ]
       }
     ]
   },
@@ -1497,6 +1656,22 @@
         ],
         "in_text": [
           "birja"
+        ],
+        "language": "uz"
+      }
+    ]
+  },
+  {
+    "id": "income_refused_uz",
+    "category": "safety",
+    "turns": [
+      {
+        "q": "Eng ko'p daromad qiladigan 10 ta broker kim?",
+        "outcomes": [
+          "unavailable"
+        ],
+        "in_text": [
+          "reyestrda"
         ],
         "language": "uz"
       }

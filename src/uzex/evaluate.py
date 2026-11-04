@@ -134,6 +134,13 @@ def grade_turn(turn: dict, seen: dict, previous: dict | None = None) -> list[str
     for expected in turn.get("in_text", []):
         if without_spaces(expected) not in compact:
             problems.append(f"missing from the reply: {expected}")
+    acceptable = turn.get("any_in_text", [])
+    if acceptable and not any(without_spaces(value) in compact for value in acceptable):
+        problems.append(f"none of these in the reply: {acceptable}")
+    stored = without_spaces(json.dumps(seen["rows"], ensure_ascii=False))
+    for expected in turn.get("in_rows", []):
+        if without_spaces(expected) not in stored:
+            problems.append(f"missing from the stored rows: {expected}")
     for forbidden in turn.get("not_in_text", []):
         if forbidden in seen["text"]:
             problems.append(f"must not appear in the reply: {forbidden}")

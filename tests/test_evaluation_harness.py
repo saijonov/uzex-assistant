@@ -173,7 +173,7 @@ def test_hard_cases_cover_what_the_old_sets_never_tested():
     categories = {case["category"] for case in cases}
     assert "critical" in categories
     critical = [case for case in cases if case["category"] == "critical"]
-    assert 8 <= len(critical) <= 20
+    assert 8 <= len(critical) <= 22
 
 
 @pytest.mark.parametrize("field", ["in_text", "not_in_text"])
@@ -182,3 +182,27 @@ def test_hard_case_expectations_are_text_lists(field):
         for turn in case["turns"]:
             assert isinstance(turn.get(field, []), list)
             assert "q" in turn and turn["outcomes"]
+
+
+def test_any_of_several_acceptable_values_passes():
+    turn = {"outcomes": ["answer"], "any_in_text": ["BK001", "КЕКУХО"]}
+    assert grade_turn(turn, shown("Брокер: КЕКУХО БРОКЕР")) == []
+    assert grade_turn(turn, shown("Код: BK001")) == []
+    assert grade_turn(turn, shown("Брокер: другой"))
+
+
+def test_value_on_a_later_page_can_be_required_in_the_stored_rows():
+    turn = {"outcomes": ["answer"], "in_rows": ["Toshkent shahri", "19.11"]}
+    assert grade_turn(turn, shown(rows=[{"region": "Toshkent shahri", "ratio": "19.11"}])) == []
+    assert grade_turn(turn, shown(rows=[{"region": "Andijon viloyati", "ratio": "2.00"}]))
+
+
+def test_hard_cases_cover_the_failures_found_after_the_first_live_run():
+    cases = {case["id"]: case for case in json.loads(CASES.read_text())}
+    wrong_length = cases["wrong_length_firm_uz"]["turns"]
+    assert "7 ta" in wrong_length[0]["in_text"]
+    assert wrong_length[1]["q"] == "qanday variantlar bor?"
+    assert {"privet_ru", "excluded_cancelled_uz", "excluded_cancelled_ru"} <= set(cases)
+    assert {"company_hs_codes_uz", "income_refused_uz", "vat_payers_answerable_uz"} <= set(cases)
+    assert cases["cancel_share_uz"]["category"] == "critical"
+    assert cases["growth_uz"]["category"] == "critical"
