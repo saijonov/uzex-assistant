@@ -12,6 +12,7 @@ class FakeBot:
         self.messages = []
         self.commands = []
         self.documents = []
+        self.actions = []
 
     async def send_message(self, chat_id, text, **kwargs):
         self.messages.append({"chat_id": chat_id, "text": text, **kwargs})
@@ -19,8 +20,8 @@ class FakeBot:
     async def answer_callback_query(self, callback_id):
         pass
 
-    async def send_chat_action(self, *args):
-        pass
+    async def send_chat_action(self, *args, **kwargs):
+        self.actions.append(args)
 
     async def set_my_commands(self, commands, **kwargs):
         self.commands.append((commands, kwargs))
@@ -69,6 +70,7 @@ async def test_telegram_replies_from_verified_answer(tmp_path, sample_database):
     state.save_result(job["id"], result)
     await service.deliver(job, result)
     assert bot.messages[0]["chat_id"] == 50
+    assert bot.actions == [(50, "typing")]
     assert "RUKUSHO‘ FERMER MCHJ" in bot.messages[0]["text"]
     assert (
         bot.messages[0]["reply_markup"].inline_keyboard[0][0].callback_data.startswith("sources:")

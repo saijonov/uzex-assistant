@@ -64,6 +64,12 @@ class Service:
         self.bot, self.state, self.engine = bot, state, engine
         self.stopping = asyncio.Event()
 
+    async def typing(self, chat_id: int):
+        while True:
+            with contextlib.suppress(TelegramAPIError):
+                await self.bot.send_chat_action(chat_id, "typing", request_timeout=3)
+            await asyncio.sleep(4)
+
     async def publish_commands(self, language: str, chat_id: int | None = None):
         commands = [
             ("start", ("Boshlash", "Начало")),
@@ -231,13 +237,15 @@ class Service:
         if remaining <= 1:
             answer = Answer(outcome="error", language=guess_language(text))
         else:
-            with contextlib.suppress(TelegramAPIError):
-                await self.bot.send_chat_action(chat_id, "typing")
+            typing = asyncio.create_task(self.typing(chat_id))
             try:
                 async with asyncio.timeout(remaining):
                     answer = await self.engine.answer(text, None, chat["history"])
             except TimeoutError:
                 answer = Answer(outcome="error", language=guess_language(text))
+            finally:
+                typing.cancel()
+                await asyncio.gather(typing, return_exceptions=True)
         rendered = render_answer(answer)
         if answer.outcome != "error":
             self.state.remember(chat_id, text, rendered)
