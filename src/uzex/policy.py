@@ -301,18 +301,22 @@ def cancellation_gap(review: RequestReview, question: str, data) -> str | None:
 
 
 def unit_gap(question: str, data) -> str | None:
-    match = re.match(r"\w+\((\w+), (\w+)\)", data.calculation or "")
-    if not match or "volume" not in data.expressions.get(match[2], match[2]):
-        return None
     value = normalize(question)
-    if PER_KILOGRAM.search(value) and "тонна" in data.units:
-        return (
-            "The user asked for a price per kilogram, and this divides by tonnes. Use SUM(mass_kg)."
-        )
-    if PER_TONNE.search(value) and "килограмм" in data.units:
-        return (
-            "The user asked for a price per tonne, and this divides by kilograms. Use SUM(mass_t)."
-        )
+    steps = list(data.computed_columns.values()) or [data.calculation or ""]
+    for step in steps:
+        match = re.match(r"\w+\((\w+), (\w+)\)", step)
+        if not match or "volume" not in data.expressions.get(match[2], match[2]):
+            continue
+        if PER_KILOGRAM.search(value) and "тонна" in data.units:
+            return (
+                "The user asked for a price per kilogram, and this divides by tonnes. "
+                "Use SUM(mass_kg)."
+            )
+        if PER_TONNE.search(value) and "килограмм" in data.units:
+            return (
+                "The user asked for a price per tonne, and this divides by kilograms. "
+                "Use SUM(mass_t)."
+            )
     return None
 
 

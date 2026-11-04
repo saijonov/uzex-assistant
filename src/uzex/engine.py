@@ -8,10 +8,11 @@ import uuid
 from openai import AsyncOpenAI
 
 from uzex.config import Settings
-from uzex.database import Database, calculate_ratio, normalize
+from uzex.database import Database, arrange_result, calculate_ratio, normalize
 from uzex.models import (
     AboutPrevious,
     Answer,
+    Arrangement,
     AskClarification,
     Calculation,
     Finish,
@@ -82,7 +83,16 @@ TOOLS = [
     tool(
         "calculate_ratio",
         Calculation,
-        "Divide two numeric result columns with exact Decimal arithmetic, row by row.",
+        "Exact Decimal arithmetic on two numeric columns of a result, row by row: ratio, "
+        "percentage, change_percent, share_percent, difference (a-b), add (a+b), multiply (a*b), "
+        "percent_of (a*b/100) or range_size (a-b+1). Each call adds a column named ratio, ratio_2, "
+        "ratio_3 and returns a new query_id, so a later call can use the earlier columns.",
+    ),
+    tool(
+        "arrange_result",
+        Arrangement,
+        "Sort a stored result by a numeric column, including a calculated one. keep_first keeps "
+        "that many rows plus any rows tied with the last one; null keeps all. Returns a new query_id.",
     ),
     tool(
         "about_previous_result",
@@ -394,6 +404,22 @@ class Engine:
                             calculation.denominator,
                             calculation.scale,
                             calculation.operation,
+                        )
+                        query_id = f"q{len(evidence) + 1}"
+                        data.query_id = query_id
+                        evidence[query_id] = data
+                        output = data.model_dump(mode="json")
+                        output["result_row_count"] = len(data.rows)
+                        output["rows"] = output["rows"][:20]
+                    elif call.name == "arrange_result":
+                        arrangement = Arrangement.model_validate(arguments)
+                        if arrangement.query_id not in evidence:
+                            raise ValueError("Unknown evidence ID")
+                        data = arrange_result(
+                            evidence[arrangement.query_id],
+                            arrangement.column,
+                            arrangement.direction,
+                            arrangement.keep_first,
                         )
                         query_id = f"q{len(evidence) + 1}"
                         data.query_id = query_id

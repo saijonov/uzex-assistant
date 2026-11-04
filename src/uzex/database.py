@@ -899,6 +899,60 @@ class Database:
                 timer.cancel()
 
 
+def calculated_value(operation: str, n: Decimal, d: Decimal) -> Decimal | None:
+    if operation == "difference":
+        return n - d
+    if operation == "add":
+        return n + d
+    if operation == "multiply":
+        return n * d
+    if operation == "percent_of":
+        return n * d / 100
+    if operation == "range_size":
+        return n - d + 1
+    if d == 0:
+        return None
+    if operation == "change_percent":
+        return (n - d) / d * 100
+    if operation in {"percentage", "share_percent"}:
+        return n / d * 100
+    return n / d
+
+
+def result_column_name(row: dict) -> str:
+    if "ratio" not in row:
+        return "ratio"
+    index = 2
+    while f"ratio_{index}" in row:
+        index += 1
+    return f"ratio_{index}"
+
+
+def arrange_result(
+    evidence: Evidence, column: str, direction: str, keep_first: int | None
+) -> Evidence:
+    if evidence.capped:
+        raise ValueError("Sorting needs the complete result, not a capped one")
+    if not evidence.rows or column not in evidence.rows[0]:
+        raise ValueError("The sorting field must exist in the cited result")
+    if keep_first is not None and keep_first < 1:
+        raise ValueError("keep_first must be at least 1")
+    known = sorted(
+        (row for row in evidence.rows if row[column] is not None),
+        key=lambda row: Decimal(str(row[column])),
+        reverse=direction == "descending",
+    )
+    blanks = [row for row in evidence.rows if row[column] is None]
+    if keep_first is None:
+        return evidence.model_copy(update={"rows": known + blanks})
+    end = min(keep_first, len(known))
+    while 0 < end < len(known) and Decimal(str(known[end][column])) == Decimal(
+        str(known[end - 1][column])
+    ):
+        end += 1
+    return evidence.model_copy(update={"rows": known[:end]})
+
+
 def calculate_ratio(
     evidence: Evidence, numerator: str, denominator: str, scale: int, operation: str = "ratio"
 ) -> Evidence:
@@ -930,6 +984,7 @@ def calculate_ratio(
                 Decimal(0),
             )
     rows = []
+    column = result_column_name(evidence.rows[0])
     for row in evidence.rows:
         if numerator not in row or (total is None and denominator not in row):
             raise ValueError("Calculation fields must exist in the cited result")
@@ -940,17 +995,20 @@ def calculate_ratio(
                 context.prec = 50
                 n = Decimal(str(row[numerator]))
                 d = total if total is not None else Decimal(str(row[denominator]))
-                if not n.is_finite() or not d.is_finite() or d == 0:
-                    value = None
-                else:
-                    ratio = (n - d) / d if operation == "change_percent" else n / d
-                    if operation in {"percentage", "change_percent", "share_percent"}:
-                        ratio *= 100
-                    value = str(ratio.quantize(Decimal(1).scaleb(-scale), rounding=ROUND_HALF_UP))
-        rows.append({**row, "ratio": value})
+                computed = (
+                    calculated_value(operation, n, d) if n.is_finite() and d.is_finite() else None
+                )
+                value = (
+                    None
+                    if computed is None
+                    else str(computed.quantize(Decimal(1).scaleb(-scale), rounding=ROUND_HALF_UP))
+                )
+        rows.append({**row, column: value})
+    text = f"{operation}({numerator}, {denominator}); ROUND_HALF_UP, {scale} decimals"
     return evidence.model_copy(
         update={
             "rows": rows,
-            "calculation": f"{operation}({numerator}, {denominator}); ROUND_HALF_UP, {scale} decimals",
+            "calculation": text,
+            "computed_columns": {**evidence.computed_columns, column: text},
         }
     )

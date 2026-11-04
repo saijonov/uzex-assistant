@@ -86,7 +86,24 @@ class Calculation(StrictModel):
     numerator: str
     denominator: str
     scale: int = Field(ge=0, le=6)
-    operation: Literal["ratio", "percentage", "change_percent", "share_percent"]
+    operation: Literal[
+        "ratio",
+        "percentage",
+        "change_percent",
+        "share_percent",
+        "difference",
+        "add",
+        "multiply",
+        "percent_of",
+        "range_size",
+    ]
+
+
+class Arrangement(StrictModel):
+    query_id: str
+    column: str
+    direction: Literal["descending", "ascending"]
+    keep_first: int | None
 
 
 class Finish(StrictModel):
@@ -122,6 +139,7 @@ class Evidence(BaseModel):
     filters: str | None
     truncated: bool = False
     calculation: str | None = None
+    computed_columns: dict[str, str] = Field(default_factory=dict)
     expressions: dict[str, str] = Field(default_factory=dict)
     selected_record_count: int | None = None
     row_limit: int = 100

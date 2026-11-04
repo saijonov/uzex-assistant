@@ -257,15 +257,24 @@ def applied_conditions(data: Evidence, language: str, include_dates: bool = Fals
 
 
 def column_label(key: str, data: Evidence, language: str) -> str:
-    if key == "ratio" and "ratio" not in data.expressions:
-        operation = (data.calculation or "").partition("(")[0]
+    text = data.computed_columns.get(key)
+    if text is None and key == "ratio" and "ratio" not in data.expressions:
+        text = data.calculation
+    if text:
         names = {
             "percentage": ("Foiz, %", "Процент, %"),
             "change_percent": ("O‘zgarish, %", "Изменение, %"),
             "share_percent": ("Ulush, %", "Доля, %"),
+            "difference": ("Farq", "Разница"),
+            "add": ("Yig‘indi", "Сумма"),
+            "multiply": ("Ko‘paytma", "Произведение"),
+            "percent_of": ("Foiz bo‘yicha summa", "Сумма по проценту"),
+            "range_size": ("Oraliqdagi raqamlar soni", "Номеров в диапазоне"),
         }
+        operation = text.partition("(")[0]
         if operation in names:
             return tr(names[operation], language)
+        return tr(LABELS["ratio"], language)
     return label(data.expressions.get(key, key), language)
 
 
@@ -515,15 +524,20 @@ def render_detail(row: dict, data: Evidence, language: str) -> list[str]:
 
 
 def render_calculation(data: Evidence, language: str) -> str:
+    steps = list(data.computed_columns.values()) or [data.calculation or ""]
+    return "; ".join(render_calculation_step(step, data, language) for step in steps)
+
+
+def render_calculation_step(text: str, data: Evidence, language: str) -> str:
     match = re.fullmatch(
-        r"(ratio|percentage|change_percent|share_percent)\((\w+), (\w+)\); ROUND_HALF_UP, (\d) decimals",
-        data.calculation or "",
+        r"(\w+)\((\w+), (\w+)\); ROUND_HALF_UP, (\d) decimals",
+        text,
     )
     if not match:
-        return data.calculation or ""
+        return text
     operation, numerator, denominator, scale = match.groups()
-    n = label(data.expressions.get(numerator, numerator), language)
-    d = label(data.expressions.get(denominator, denominator), language)
+    n = column_label(numerator, data, language)
+    d = column_label(denominator, data, language)
     formula = f"({n}) ÷ ({d})"
     if operation == "percentage":
         formula += " × 100%"
@@ -531,6 +545,16 @@ def render_calculation(data: Evidence, language: str) -> str:
         formula = f"(({n}) − ({d})) ÷ ({d}) × 100%"
     elif operation == "share_percent":
         formula = f"({n}) ÷ ({tr(('jami', 'итог'), language)}: {n}) × 100%"
+    elif operation == "difference":
+        formula = f"({n}) − ({d})"
+    elif operation == "add":
+        formula = f"({n}) + ({d})"
+    elif operation == "multiply":
+        formula = f"({n}) × ({d})"
+    elif operation == "percent_of":
+        formula = f"({n}) × ({d}) ÷ 100"
+    elif operation == "range_size":
+        formula = f"({n}) − ({d}) + 1"
     precision = tr(
         (f"{scale} kasr xonasigacha yaxlitlangan", f"округлено до {scale} знаков"), language
     )
@@ -1059,8 +1083,7 @@ def render_sources(data: Evidence, language: str) -> str:
             + f": {data.selected_record_count}"
         )
     lines.append(tr(("Hisoblash sharti", "Условия расчёта"), language) + ":\n" + data.sql)
-    if data.calculation:
-        lines.append(data.calculation)
+    lines.extend(data.computed_columns.values() or ([data.calculation] if data.calculation else []))
     originals = []
     for row in data.rows[:3]:
         for key in ("product_name", "product"):
