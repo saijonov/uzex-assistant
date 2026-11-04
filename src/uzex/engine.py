@@ -22,6 +22,7 @@ from uzex.models import (
     SampleQuery,
 )
 from uzex.policy import (
+    UNIT_WORDS,
     answer_gap,
     bare_record_number,
     cancellation_gap,
@@ -169,6 +170,7 @@ class Engine:
         review = None
         ambiguities = {}
         gap_reported = False
+        unit_filter_checked = False
         needless_question_rejected = False
         messages = [*history[-8:]]
         if pending:
@@ -366,7 +368,16 @@ class Engine:
                             "candidates": rows,
                             "may_be_truncated": len(rows) == 30,
                         }
-                        if not rows and self.database.names_product(lookup.text):
+                        if (
+                            not rows
+                            and lookup.kind == "product"
+                            and UNIT_WORDS.search(normalize(lookup.text))
+                        ):
+                            output["note"] = (
+                                "This word is a unit of measure, not a product. Filter the unit "
+                                "column with its real value, and do not look up a product."
+                            )
+                        elif not rows and self.database.names_product(lookup.text):
                             output["note"] = (
                                 "This spelling found nothing, but it looks like a real product. "
                                 "Look it up again with the base word or the Russian name."
@@ -448,6 +459,18 @@ class Engine:
                                 if other != finish.query_id and evidence[other] not in extras:
                                     extras.append(evidence[other])
                             empty = data.matched_count == 0 or not data.rows
+                            if empty and not extras and not unit_filter_checked:
+                                unit_filter_checked = True
+                                units = await asyncio.to_thread(
+                                    self.database.units_hidden_by_filter, data
+                                )
+                                if units:
+                                    raise ValueError(
+                                        f"Nothing matched only because of the unit filter: these "
+                                        f"records use {units}. Remove it and answer in those units. "
+                                        "A price per kilogram or tonne uses SUM(mass_kg) or "
+                                        "SUM(mass_t) with unit IN ('килограмм', 'тонна')."
+                                    )
                             if finish.outcome == "no_match" and not empty:
                                 raise ValueError("No-match claim contradicts returned data")
                             if finish.outcome == "answer" and empty and not extras:

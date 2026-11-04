@@ -139,8 +139,10 @@ ENFORCED_VALUE_COLUMNS = {
         "buyer_broker_name",
         "seller_broker_region",
         "buyer_broker_region",
+        "warehouse_address",
     ),
     "broker_deals": ("broker_side", "broker_name", "broker_region"),
+    "contracts": ("warehouse_address",),
     "participants": ("region", "name"),
     "brokers": ("region", "name"),
 }
@@ -581,6 +583,11 @@ class Database:
             for operand in operands:
                 if not isinstance(operand, exp.Literal) or not operand.is_string:
                     continue
+                if target.name == "warehouse_address" and named_regions(operand.name):
+                    raise ValueError(
+                        f"{operand.name!r} names a region, which has its own column: filter region "
+                        "with its real value, such as Toshkent shahri, not the address text."
+                    )
                 if isinstance(node, (exp.Like, exp.ILike)):
                     pattern = re.escape(operand.name).replace("%", ".*").replace("_", ".")
                     flags = re.IGNORECASE | re.DOTALL if folded else re.DOTALL
@@ -593,12 +600,41 @@ class Database:
                     hint = (
                         f"Real values: {sorted(known)}"
                         if len(known) <= 30
+                        else "Addresses spell places in Latin Uzbek with ‘ as in Farg‘ona. If no "
+                        "spelling matches, finish unavailable, reason not_found"
+                        if target.name == "warehouse_address"
                         else "Use lookup_entities to find the real source strings"
                     )
                     raise ValueError(
                         f"No record has {target.name} matching {operand.name!r}. {hint}. "
                         "Correct the filter; this rejection is not evidence of absence."
                     )
+
+    def units_hidden_by_filter(self, data: Evidence) -> list[str]:
+        if data.table not in DEAL_TABLES:
+            return []
+        tree = sqlglot.parse_one(data.sql, read="duckdb")
+        where = tree.args.get("where")
+        if where is None:
+            return []
+        root = where.this
+        conditions = list(root.flatten()) if isinstance(root, exp.And) else [root]
+        kept = [
+            condition
+            for condition in conditions
+            if not (
+                isinstance(condition, (exp.EQ, exp.In))
+                and isinstance(condition.this, exp.Column)
+                and condition.this.name == "unit"
+            )
+        ]
+        if len(kept) == len(conditions):
+            return []
+        probe = exp.select(exp.column("unit")).distinct().from_(data.table)
+        if kept:
+            probe = probe.where(exp.and_(*kept))
+        with self.connect() as db:
+            return sorted(row[0] for row in db.execute(probe.sql(dialect="duckdb")).fetchall())
 
     def record_kinds(self, number: str) -> list[str]:
         with self.connect() as db:

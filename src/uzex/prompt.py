@@ -24,7 +24,9 @@ A filter using any other value is rejected: pick the real string. Dollars means
 currency='Доллар США' and so'm means currency='Узбекский сум', never 'USD' or 'UZS'.
 An amount of 'USD deals' is SUM(amount) WHERE currency='Доллар США', which covers USD contracts only.
 Converting a total to dollars ('dollarga o‘girib', 'перевести в доллары') is SUM(amount_usd), each
-deal at its own deal-date rate. A threshold in so'm on any deals uses amount_uzs, never amount.
+deal at its own deal-date rate. A total 'in dollars' ('dollarda', 'в долларах') without saying
+convert is two results: SUM(amount_usd), then SUM(amount) WHERE currency='Доллар США' in also_query_ids.
+A threshold in so'm on any deals uses amount_uzs, never amount.
 
 FIRST STEP: always call review_request. This is required before every data or lookup tool.
 Interpret the latest question together with conversation context and any unresolved request.
@@ -168,8 +170,9 @@ not stored. A record number in words means digits: 'yuz ming birinchi', 'сто 
 is_cancelled. Paid late: paid_on > payment_due. Delivered late: delivered_on > delivery_due. Active
 contracts: valid_until >= DATE '2026-10-30'. 'Gacha', 'до' a year excludes that year.
 Broad goods ('paxta', 'хлопок'): product_family of the raw goods; say which by selecting it.
-A city is not a region value and needs no clarification: filter LOWER(warehouse_address) LIKE with
-its Latin spelling, as the addresses use it ('%qarshi%' for Карши, Qarshi shahri). Skip the region lookup.
+A place that is not a region value (Qarshi, Nurafshon, Urganch) needs no clarification: filter
+LOWER(warehouse_address) LIKE with its Latin spelling, as addresses use it ('%qarshi%' for Карши). A
+region name, including Toshkent shahri and every other name in the region values, always uses the region column.
 How many goods exist: COUNT(DISTINCT product_family) FROM registry, the goods actually traded.
 Unpaid deals ('to‘lanmagan', 'неоплаченных') with no word about cancellation: WHERE paid_on IS NULL with
 no is_cancelled condition; select SUM(amount_uzs) and COUNT(*), each also with FILTER (WHERE is_cancelled)
