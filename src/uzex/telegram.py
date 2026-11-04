@@ -33,6 +33,7 @@ from uzex.policy import (
     attach_csv,
     export_followup,
     file_preference,
+    impossible_date,
     malformed_identifier,
     resolve_pending_reply,
 )
@@ -356,6 +357,18 @@ class Service:
                     "delivery": file_preference(text),
                 },
             )
+            return {"texts": [rendered], "answer": answer.model_dump(mode="json")}
+        wrong_date = impossible_date(text)
+        if wrong_date:
+            answer = Answer(
+                outcome="unavailable",
+                language=guess_language(text),
+                reason="invalid_date",
+                identifier=wrong_date,
+            )
+            rendered = render_answer(answer)
+            self.state.remember(chat_id, text, rendered)
+            self.state.set_pending(chat_id, None)
             return {"texts": [rendered], "answer": answer.model_dump(mode="json")}
         pending = resolve_pending_reply(pending, text)
         latest = self.state.latest_result(chat_id)

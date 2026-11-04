@@ -11,7 +11,7 @@ from uzex.render import label, render_answer
 @pytest.mark.parametrize(
     "sql,expected",
     [
-        ("SELECT COUNT(DISTINCT seller_inn) AS n FROM registry", "Turli qiymatlar soni"),
+        ("SELECT COUNT(DISTINCT seller_inn) AS n FROM registry", "Sotuvchilar soni"),
         ("SELECT SUM(DISTINCT amount_uzs) AS n FROM registry", "Summa, so‘m"),
     ],
 )
@@ -21,7 +21,7 @@ def test_distinct_aggregates_render(sample_database, sql, expected):
 
 
 def test_distinct_label_exists_in_russian():
-    assert "разных значений" in label("COUNT(DISTINCT buyer_inn)", "ru")
+    assert "Количество покупателей" in label("COUNT(DISTINCT buyer_inn)", "ru")
 
 
 def test_label_never_raises_on_expressions_it_cannot_parse():

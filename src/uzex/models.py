@@ -150,6 +150,7 @@ class Evidence(BaseModel):
     requested_count: int | None = None
     grouped: bool = False
     cancelled_records: int | None = None
+    ties_beyond_limit: bool = False
 
     @property
     def capped(self) -> bool:

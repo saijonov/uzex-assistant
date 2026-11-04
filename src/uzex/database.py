@@ -301,6 +301,30 @@ def region_choice(text: str) -> str | None:
     return TOSHKENT_REGIONS[0] if city else TOSHKENT_REGIONS[1]
 
 
+def tied_beyond_limit(
+    db, tree: exp.Select, columns: list[str], expressions: dict[str, str], shown: int
+) -> bool:
+    order, limit = tree.args.get("order"), tree.args.get("limit")
+    if not order or not limit or tree.args.get("offset") or not 0 < shown <= 100:
+        return False
+    if int(limit.expression.this) != shown:
+        return False
+    target = order.expressions[0].this
+    written = target.sql(dialect="duckdb")
+    key = next(
+        (name for name, text in expressions.items() if written in {name, text}),
+        None,
+    )
+    if key is None:
+        return False
+    rows = db.execute(tree.limit(shown + 1).sql(dialect="duckdb")).fetchall()
+    if len(rows) <= shown:
+        return False
+    index = columns.index(key)
+    last, following = rows[shown - 1][index], rows[shown][index]
+    return isinstance(last, (int, float, Decimal)) and last == following
+
+
 def serial(value):
     if isinstance(value, Decimal):
         return str(value)
@@ -894,6 +918,9 @@ class Database:
                     else None,
                     truncated=len(rows) > row_limit,
                     requested_count=asked if asked and len(rows) > row_limit else None,
+                    ties_beyond_limit=tied_beyond_limit(
+                        db, tree, columns, expressions, len(rows[:row_limit])
+                    ),
                     row_limit=row_limit,
                     expressions=expressions,
                     selected_record_count=selected_count,

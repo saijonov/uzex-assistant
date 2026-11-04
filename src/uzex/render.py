@@ -154,6 +154,33 @@ TEXT = {
 }
 
 
+DISTINCT_LABELS = {
+    "seller_inn": ("Sotuvchilar soni", "Количество продавцов"),
+    "buyer_inn": ("Xaridorlar soni", "Количество покупателей"),
+    "inn": ("Kompaniyalar soni", "Количество компаний"),
+    "broker_code": ("Brokerlar soni", "Количество брокеров"),
+    "seller_broker_code": ("Brokerlar soni", "Количество брокеров"),
+    "buyer_broker_code": ("Brokerlar soni", "Количество брокеров"),
+    "deal_id": ("Bitimlar soni", "Количество сделок"),
+    "contract_id": ("Shartnomalar soni", "Количество контрактов"),
+    "product_family": ("Tovarlar soni", "Количество товаров"),
+}
+BROKER_SIDES = {
+    "seller_broker_code": ("sotuvchi tomonida", "на стороне продавца"),
+    "buyer_broker_code": ("xaridor tomonida", "на стороне покупателя"),
+}
+DAY_NAMES = (
+    ("Yakshanba", "Воскресенье"),
+    ("Dushanba", "Понедельник"),
+    ("Seshanba", "Вторник"),
+    ("Chorshanba", "Среда"),
+    ("Payshanba", "Четверг"),
+    ("Juma", "Пятница"),
+    ("Shanba", "Суббота"),
+)
+ENGLISH_DAYS = ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+
+
 def tr(values: tuple[str, str], language: str) -> str:
     return values[1 if language == "ru" else 0]
 
@@ -222,6 +249,11 @@ def describe_condition(node, language: str) -> str:
         high = condition_value(node.args["high"], language)
         return tr((f"{name}: {low} dan {high} gacha", f"{name}: с {low} по {high}"), language)
     if isinstance(node, exp.EQ):
+        if isinstance(node.expression, exp.Column):
+            names = {target.name, node.expression.name}
+            if "broker_code" in names and names & set(BROKER_SIDES):
+                return tr(BROKER_SIDES[next(iter(names & set(BROKER_SIDES)))], language)
+            return f"{name} = {condition_value(node.expression, language)}"
         return f"{name}: {condition_value(node.expression, language)}"
     symbols = {exp.NEQ: "≠", exp.GT: ">", exp.GTE: "≥", exp.LT: "<", exp.LTE: "≤"}
     if type(node) in symbols:
@@ -298,6 +330,12 @@ def label(expression: str, language: str) -> str:
                 "MONTH": ("oy", "месяц"),
                 "DAY": ("kun", "день"),
                 "QUARTER": ("chorak", "квартал"),
+                "DAYOFWEEK": ("hafta kuni", "день недели"),
+                "DOW": ("hafta kuni", "день недели"),
+                "ISODOW": ("hafta kuni", "день недели"),
+                "HOUR": ("soat", "час"),
+                "WEEK": ("hafta", "неделя"),
+                "MINUTE": ("daqiqa", "минута"),
             }
             part = str(parsed.this).upper()
             if part in parts:
@@ -306,6 +344,13 @@ def label(expression: str, language: str) -> str:
                     + ": "
                     + tr(parts[part], language)
                 )
+        if isinstance(
+            parsed, (exp.Abs, exp.Lower, exp.Upper, exp.Cast, exp.TryCast, exp.Round, exp.Coalesce)
+        ):
+            return label(parsed.this.sql(dialect="duckdb"), language)
+        if isinstance(parsed, exp.Length):
+            field = label(parsed.this.sql(dialect="duckdb"), language)
+            return f"{field}: " + tr(("uzunlik", "длина"), language)
         if isinstance(parsed, (exp.DateTrunc, exp.TimestampTrunc, exp.TimeToStr)):
             field = parsed.this.sql(dialect="duckdb")
             return f"{label(field, language)}: " + tr(("davr", "период"), language)
@@ -322,6 +367,9 @@ def label(expression: str, language: str) -> str:
                     label(item.sql(dialect="duckdb"), language) for item in parsed.this.expressions
                 )
                 if parsed.sql_name() == "COUNT":
+                    only = parsed.this.expressions[0].sql(dialect="duckdb")
+                    if len(parsed.this.expressions) == 1 and only in DISTINCT_LABELS:
+                        return tr(DISTINCT_LABELS[only], language)
                     return (
                         tr(("Turli qiymatlar soni", "Количество разных значений"), language)
                         + f": {fields}"
@@ -352,6 +400,10 @@ def value_field(expression: str) -> str | None:
         return match.group(1)
     if re.match(r"SUM\(amount_usd\)", expression, re.IGNORECASE):
         return "amount_usd"
+    if re.match(r"EXTRACT\((?:DAYOFWEEK|DOW|ISODOW)\b", expression, re.IGNORECASE):
+        return "day_of_week"
+    if re.fullmatch(r"(?:STRFTIME|TIME_TO_STR)\(.*'%A'\)", expression, re.IGNORECASE):
+        return "day_name"
     return "date_part" if re.match(r"EXTRACT\(", expression, re.IGNORECASE) else None
 
 
@@ -377,6 +429,10 @@ def format_value(value, language: str, field: str | None = None) -> str:
         "warehouse_address",
         "date_part",
     }
+    if field == "day_of_week" and str(value).isdigit():
+        return tr(DAY_NAMES[int(value) % 7], language)
+    if field == "day_name" and value in ENGLISH_DAYS:
+        return tr(DAY_NAMES[ENGLISH_DAYS.index(value)], language)
     number = str(value)
     if field == "amount_usd" and re.fullmatch(r"-?\d+(?:\.\d+)?", number):
         number = str(Decimal(number).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
@@ -662,6 +718,16 @@ def render_answer(answer: Answer, page: int = 0) -> str:
     if answer.outcome in {"unavailable", "clarify"}:
         if answer.reason == "wrong_length":
             lines = wrong_length_text(answer)
+        elif answer.reason == "invalid_date":
+            lines = [
+                tr(
+                    (
+                        f"{answer.identifier} sanasi kalendarda yo‘q. Sanani tekshirib, qayta yozing.",
+                        f"Даты {answer.identifier} не существует. Проверьте дату и напишите ещё раз.",
+                    ),
+                    lang,
+                )
+            ]
         elif answer.missing_fields:
             lines = [tr(CLARIFICATION_TEXT[field], lang) for field in answer.missing_fields]
         else:
@@ -783,6 +849,16 @@ def render_result(data: Evidence, no_match: bool, lang: str, page: int) -> str:
         lines.append(note)
     if data.capped:
         lines.append(cap_text(data, lang))
+    if data.ties_beyond_limit:
+        lines.append(
+            tr(
+                (
+                    "Diqqat: shunday qiymat boshqa yozuvlarda ham bor, hammasi ko‘rsatilmagan.",
+                    "Внимание: такое же значение есть и у других записей, показаны не все.",
+                ),
+                lang,
+            )
+        )
     lines.append(tr(("Manba", "Источник"), lang) + ": " + source_text(data, lang))
     return "\n".join(lines).strip()
 

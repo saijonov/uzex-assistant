@@ -1,3 +1,4 @@
+import datetime as dt
 import re
 
 from uzex.database import TOSHKENT_REGIONS, named_regions, normalize, region_choice
@@ -270,6 +271,60 @@ def malformed_identifier(question: str) -> str | None:
     return None
 
 
+MONTH_STEMS = (
+    "yanvar",
+    "fevral",
+    "mart",
+    "aprel",
+    "may",
+    "iyun",
+    "iyul",
+    "avgust",
+    "sent(?:a|ya)br",
+    "okt(?:a|ya)br",
+    "noyabr",
+    "dekabr",
+)
+DAY_FIRST_DATE = re.compile(r"(?<![\d.])(\d{1,2})[./-](\d{1,2})[./-](20\d{2})(?!\d)")
+YEAR_FIRST_DATE = re.compile(r"(?<!\d)(20\d{2})-(\d{1,2})-(\d{1,2})(?!\d)")
+NAMED_MONTH_DATE = re.compile(
+    r"(?:\b(?P<before>20\d{2}) (?:yil\w* |god\w* )?)?\b(?P<day>\d{1,2}) (?P<month>"
+    + "|".join(f"(?:{stem})" for stem in MONTH_STEMS)
+    + r")\w*(?: (?P<after>20\d{2})\b)?"
+)
+
+
+def date_exists(year: int, month: int, day: int) -> bool:
+    try:
+        dt.date(year, month, day)
+    except ValueError:
+        return False
+    return True
+
+
+def impossible_date(question: str) -> str | None:
+    for match in DAY_FIRST_DATE.finditer(question):
+        day, month, year = map(int, match.groups())
+        if not date_exists(year, month, day):
+            return f"{day:02d}.{month:02d}.{year}"
+    for match in YEAR_FIRST_DATE.finditer(question):
+        year, month, day = map(int, match.groups())
+        if not date_exists(year, month, day):
+            return f"{day:02d}.{month:02d}.{year}"
+    for match in NAMED_MONTH_DATE.finditer(normalize(question)):
+        day = int(match["day"])
+        if day > 31:
+            continue
+        month = next(
+            index for index, stem in enumerate(MONTH_STEMS, 1) if re.fullmatch(stem, match["month"])
+        )
+        written = match["before"] or match["after"]
+        if not date_exists(int(written) if written else 2024, month, day):
+            suffix = f".{written}" if written else ""
+            return f"{day:02d}.{month:02d}{suffix}"
+    return None
+
+
 def bare_record_number(review: RequestReview, question: str, pending: dict | None) -> str | None:
     if review.subject in {"deal", "contract"}:
         return None
@@ -331,6 +386,20 @@ def unit_gap(question: str, data) -> str | None:
 def answer_gap(review: RequestReview, question: str, data) -> str | None:
     if not data.rows:
         return None
+    if data.ties_beyond_limit and len(data.rows) == 1:
+        return (
+            "Other records share this first place, and LIMIT hides them. Use QUALIFY RANK() OVER "
+            "(ORDER BY the same metric DESC) = 1 instead of LIMIT, so all of them are shown."
+        )
+    if (
+        review.task == "count"
+        and "NOT is_cancelled" in (data.filters or "")
+        and not MENTIONS_CANCELLED.search(normalize(question))
+    ):
+        return (
+            "Counts include cancelled deals unless the user excludes them. Remove NOT is_cancelled, "
+            "unless the user asked for that earlier in this conversation."
+        )
     expressions = [data.expressions[key] for key in data.rows[0] if key in data.expressions]
     if review.task == "rank" and all(AGGREGATE_EXPRESSION.match(item) for item in expressions):
         return (
