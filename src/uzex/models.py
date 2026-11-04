@@ -21,6 +21,7 @@ class Calculation(StrictModel):
     numerator: str
     denominator: str
     scale: int = Field(ge=0, le=6)
+    operation: Literal["ratio", "percentage", "change_percent"]
 
 
 class Finish(StrictModel):

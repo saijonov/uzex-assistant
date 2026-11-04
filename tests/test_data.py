@@ -57,6 +57,18 @@ def test_mixed_unit_aggregation_rejected(sample_database):
         sample_database.query("SELECT SUM(volume) AS total FROM registry", "q1")
 
 
+def test_compound_date_and_status_filters_work(sample_database):
+    result = sample_database.query(
+        "SELECT COUNT(*) AS n FROM registry WHERE "
+        "deal_date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31' "
+        "AND NOT is_cancelled",
+        "q1",
+    )
+    assert result.rows[0]["n"] > 0
+    assert result.period_start.startswith("2025-")
+    assert result.period_end.startswith("2025-")
+
+
 @pytest.mark.parametrize(
     "sql",
     [
@@ -80,7 +92,7 @@ def test_mixed_unit_aggregation_rejected(sample_database):
     ],
 )
 def test_unsafe_queries_are_blocked(sql):
-    with pytest.raises((ValueError, Exception)):
+    with pytest.raises(ValueError):
         validate_query(sql)
 
 

@@ -15,6 +15,8 @@ from uzex.models import Evidence
 
 TABLES = {"registry", "contracts", "participants", "brokers", "usd_rates"}
 FUNCTIONS = {
+    "AND",
+    "OR",
     "COUNT",
     "SUM",
     "MIN",
@@ -126,6 +128,8 @@ def validate_query(sql: str) -> tuple[exp.Select, str]:
     tree = statements[0]
     if tree.args.get("with_") or tree.args.get("joins") or tree.args.get("into"):
         raise ValueError("Use one approved view without joins, CTEs or INTO")
+    if tree.args.get("having"):
+        raise ValueError("Put scope filters in WHERE, not HAVING, so evidence matches the answer")
     if len(list(tree.find_all(exp.Select))) != 1 or tree.find(exp.Subquery):
         raise ValueError("Nested queries are not allowed")
     tables = list(tree.find_all(exp.Table))
@@ -143,8 +147,6 @@ def validate_query(sql: str) -> tuple[exp.Select, str]:
             name = node.name.upper() if isinstance(node, exp.Anonymous) else node.sql_name()
             if name not in FUNCTIONS:
                 raise ValueError(f"Function not allowed: {name}")
-        if isinstance(node, exp.Column) and node.name in {"source_row", "quantity_lots"}:
-            continue
     for item in tree.expressions:
         if isinstance(item, exp.Alias):
             if not re.fullmatch(r"[a-z][a-z0-9_]{0,50}", item.alias):
@@ -154,11 +156,18 @@ def validate_query(sql: str) -> tuple[exp.Select, str]:
         if isinstance(item, exp.Alias) and isinstance(item.this, exp.Literal):
             raise ValueError("Literal output is forbidden")
         projection = item.this if isinstance(item, exp.Alias) else item
-        if not isinstance(projection, (exp.Column, exp.Star, exp.Func)):
+        if not isinstance(projection, (exp.Column, exp.Star, exp.Func, exp.Filter)):
             raise ValueError("Output must be a source field or approved aggregation")
         for literal in projection.find_all(exp.Literal):
             parent = literal.parent
-            if not isinstance(parent, (exp.DateTrunc, exp.TimestampTrunc, exp.TimeToStr)):
+            inside_filter = False
+            ancestor = literal.parent
+            while ancestor is not None:
+                inside_filter = inside_filter or isinstance(ancestor, exp.Where)
+                ancestor = ancestor.parent
+            if not inside_filter and not isinstance(
+                parent, (exp.DateTrunc, exp.TimestampTrunc, exp.TimeToStr)
+            ):
                 raise ValueError("Invented output constants are forbidden")
         if projection.find(exp.Case) or projection.find(exp.If):
             raise ValueError("Conditional output values are forbidden")
@@ -345,7 +354,9 @@ class Database:
                 timer.cancel()
 
 
-def calculate_ratio(evidence: Evidence, numerator: str, denominator: str, scale: int) -> Evidence:
+def calculate_ratio(
+    evidence: Evidence, numerator: str, denominator: str, scale: int, operation: str = "ratio"
+) -> Evidence:
     if not evidence.rows or not 0 <= scale <= 6:
         raise ValueError("A nonempty query and scale between 0 and 6 are required")
     rows = []
@@ -361,11 +372,14 @@ def calculate_ratio(evidence: Evidence, numerator: str, denominator: str, scale:
                 if not n.is_finite() or not d.is_finite() or d == 0:
                     value = None
                 else:
-                    value = str((n / d).quantize(Decimal(1).scaleb(-scale), rounding=ROUND_HALF_UP))
+                    ratio = (n - d) / d if operation == "change_percent" else n / d
+                    if operation in {"percentage", "change_percent"}:
+                        ratio *= 100
+                    value = str(ratio.quantize(Decimal(1).scaleb(-scale), rounding=ROUND_HALF_UP))
         rows.append({**row, "ratio": value})
     return evidence.model_copy(
         update={
             "rows": rows,
-            "calculation": f"{numerator} / {denominator}; ROUND_HALF_UP, {scale} decimals",
+            "calculation": f"{operation}({numerator}, {denominator}); ROUND_HALF_UP, {scale} decimals",
         }
     )
