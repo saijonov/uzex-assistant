@@ -2,7 +2,7 @@ import csv
 import io
 import json
 import re
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 import sqlglot
 from sqlglot import exp
@@ -51,6 +51,10 @@ LABELS = {
     "delivered_lots": ("Yetkazilgan lotlar", "Поставлено лотов"),
     "amount": ("Summa, shartnoma valyutasida", "Сумма в валюте контракта"),
     "amount_uzs": ("Summa, so‘m", "Сумма, сум"),
+    "amount_usd": ("Summa, AQSh dollari", "Сумма, доллар США"),
+    "days_to_payment": ("Bitimdan to‘lovgacha, kun", "От сделки до оплаты, дней"),
+    "days_to_delivery": ("Bitimdan yetkazishgacha, kun", "От сделки до поставки, дней"),
+    "days_payment_to_delivery": ("To‘lovdan yetkazishgacha, kun", "От оплаты до поставки, дней"),
     "starting_price": ("Boshlang‘ich birlik narxi", "Стартовая цена за единицу"),
     "base_price": ("Bazaviy birlik narxi", "Базисная цена за единицу"),
     "currency": ("Valyuta", "Валюта"),
@@ -346,6 +350,8 @@ def value_field(expression: str) -> str | None:
     match = re.fullmatch(r"(?:MIN|MAX)\((\w+)\)", expression, re.IGNORECASE)
     if match:
         return match.group(1)
+    if re.match(r"SUM\(amount_usd\)", expression, re.IGNORECASE):
+        return "amount_usd"
     return "date_part" if re.match(r"EXTRACT\(", expression, re.IGNORECASE) else None
 
 
@@ -372,10 +378,19 @@ def format_value(value, language: str, field: str | None = None) -> str:
         "date_part",
     }
     number = str(value)
+    if field == "amount_usd" and re.fullmatch(r"-?\d+(?:\.\d+)?", number):
+        number = str(Decimal(number).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
     if field not in protected and re.fullmatch(r"-?\d+(?:\.\d+)?", number):
         whole, dot, fraction = number.partition(".")
         fraction = fraction.rstrip("0")
-        if field in {"amount", "amount_uzs", "starting_price", "base_price", "usd_uzs"}:
+        if field in {
+            "amount",
+            "amount_uzs",
+            "amount_usd",
+            "starting_price",
+            "base_price",
+            "usd_uzs",
+        }:
             fraction = fraction.ljust(2, "0")
         sign = "-" if whole.startswith("-") else ""
         whole = sign + f"{abs(int(whole)):,}".replace(",", " ")

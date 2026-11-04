@@ -218,6 +218,11 @@ def import_archive(archive: Path, destination: Path) -> dict:
                         WHEN d.unit = 'тонна' THEN delivered_volume * 1000 END AS delivered_mass_kg,
                       CASE WHEN c.currency = 'Доллар США'
                         THEN d.amount * fx.usd_uzs ELSE d.amount END AS amount_uzs,
+                      CASE WHEN c.currency = 'Доллар США' THEN d.amount
+                        ELSE CAST(d.amount / fx.usd_uzs AS DECIMAL(24,6)) END AS amount_usd,
+                      d.paid_on - d.deal_date AS days_to_payment,
+                      d.delivered_on - d.deal_date AS days_to_delivery,
+                      d.delivered_on - d.paid_on AS days_payment_to_delivery,
                       d.deal_date + c.payment_days AS payment_due,
                       d.paid_on + c.delivery_days AS delivery_due,
                       d.status = 'Аннулирован(Не оплачен)' AS is_cancelled
