@@ -54,7 +54,8 @@ EXCLUDES_CANCELLED = re.compile(
 )
 KEEPS_CANCELLED = re.compile(r"chiqar\w* tashlama\w*|chiqarma\w*|\bne isklyuch\w*|\bne vichit\w*")
 MENTIONS_CANCELLED = re.compile(
-    r"\bbekor\b|\bannul\w*|\botmen\w*|\bcancel\w*|\bbarcha holat\w*|\bvse\w* sostoyan\w*"
+    r"\bbekor\b|\bannul\w*|\botmen\w*|\bcancel\w*|\bbarcha holat\w*|\bvse\w* sostoyan\w*|"
+    r"\btolanmagan\w*|\bneoplach\w*|\bneoplat\w*|\bsotilmay\w*|\bsotilmagan\w*|\bneprodan\w*"
 )
 PER_KILOGRAM = re.compile(r"\b(?:kg|kilo\w*)\b")
 PER_TONNE = re.compile(r"\btonn\w*\b")
