@@ -30,6 +30,7 @@ from uzex.policy import (
     repeats_question,
     settle_candidates,
     unavailable_request,
+    unit_gap,
 )
 from uzex.prompt import instructions
 
@@ -407,10 +408,9 @@ class Engine:
                             if finish.outcome == "answer" and empty:
                                 finish.outcome = "no_match"
                             if finish.outcome == "answer":
-                                wrong_scope = cancellation_gap(
-                                    review,
-                                    " ".join([question, (pending or {}).get("question", "")]),
-                                    data,
+                                context = " ".join([question, (pending or {}).get("question", "")])
+                                wrong_scope = cancellation_gap(review, context, data) or unit_gap(
+                                    context, data
                                 )
                                 if wrong_scope:
                                     raise ValueError(wrong_scope)

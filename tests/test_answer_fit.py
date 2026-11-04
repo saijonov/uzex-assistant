@@ -5,7 +5,7 @@ from uzex.config import Settings
 from uzex.database import calculate_ratio
 from uzex.engine import Engine
 from uzex.models import RequestReview
-from uzex.policy import cancellation_gap
+from uzex.policy import cancellation_gap, unit_gap
 
 
 def detail_review(**overrides):
@@ -288,3 +288,80 @@ async def test_a_repeated_wrong_cancelled_filter_never_reaches_the_user(sample_d
     )
     assert answer.outcome == "error"
     assert answer.evidence is None
+
+
+def price_of(sample_database, unit, volume="SUM(volume)"):
+    data = sample_database.query(
+        f"SELECT SUM(amount) AS a, {volume} AS v FROM registry "
+        f"WHERE unit = '{unit}' AND currency = 'Узбекский сум' AND NOT is_cancelled",
+        "q1",
+    )
+    return calculate_ratio(data, "a", "v", 2)
+
+
+def test_price_per_kilogram_cannot_be_a_price_per_tonne(sample_database):
+    gap = unit_gap("2025-yilda 1 kg shakar necha pul?", price_of(sample_database, "тонна"))
+    assert gap and "mass_kg" in gap
+
+
+def test_price_per_tonne_cannot_be_a_price_per_kilogram(sample_database):
+    gap = unit_gap("цена за тонну", price_of(sample_database, "килограмм"))
+    assert gap and "mass_t" in gap
+
+
+@pytest.mark.parametrize(
+    "question,unit,volume",
+    [
+        ("1 kg shakar necha pul?", "тонна", "SUM(mass_kg)"),
+        ("1 tonna narxi", "килограмм", "SUM(mass_t)"),
+        ("1 kg narxi", "килограмм", "SUM(volume)"),
+        ("1 tonna narxi", "тонна", "SUM(volume)"),
+        ("Shakar narxi qancha?", "тонна", "SUM(volume)"),
+    ],
+)
+def test_matching_units_are_accepted(sample_database, question, unit, volume):
+    assert unit_gap(question, price_of(sample_database, unit, volume)) is None
+
+
+async def test_wrong_unit_price_is_corrected_before_answering(sample_database):
+    where = "WHERE unit = 'тонна' AND currency = 'Узбекский сум' AND NOT is_cancelled"
+    client = ScriptedClient(
+        [
+            review(task="price", subject="product", period="specified", language="uz"),
+            (
+                "query_registry",
+                {"sql": f"SELECT SUM(amount) AS a, SUM(volume) AS v FROM registry {where}"},
+            ),
+            (
+                "calculate_ratio",
+                {
+                    "query_id": "q1",
+                    "numerator": "a",
+                    "denominator": "v",
+                    "scale": 2,
+                    "operation": "ratio",
+                },
+            ),
+            finish(query_id="q2"),
+            (
+                "query_registry",
+                {"sql": f"SELECT SUM(amount) AS a, SUM(mass_kg) AS v FROM registry {where}"},
+            ),
+            (
+                "calculate_ratio",
+                {
+                    "query_id": "q3",
+                    "numerator": "a",
+                    "denominator": "v",
+                    "scale": 2,
+                    "operation": "ratio",
+                },
+            ),
+            finish(query_id="q4"),
+        ]
+    )
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer(
+        "2025-yilda 1 kg shakar necha pul?"
+    )
+    assert answer.outcome == "answer"
+    assert "mass_kg" in answer.evidence.sql
