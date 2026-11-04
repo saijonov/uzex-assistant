@@ -366,7 +366,7 @@ def render_calculation(data: Evidence, language: str) -> str:
     return f"{formula}; {precision}"
 
 
-def render_answer(answer: Answer) -> str:
+def render_answer(answer: Answer, page: int = 0) -> str:
     lang = answer.language
     if answer.outcome == "error":
         return tr(TEXT["error"], lang)
@@ -378,14 +378,19 @@ def render_answer(answer: Answer) -> str:
     data = answer.evidence
     if data is None:
         return tr(TEXT["error"], lang)
+    if page < 0 or page > max((len(data.rows) - 1) // 10, 0):
+        raise ValueError("Result page does not exist")
+    start = page * 10
     lines = [tr(TEXT["no_match"], lang)] if answer.outcome == "no_match" else []
-    for index, row in enumerate(data.rows[:10], 1):
+    for index, row in enumerate(data.rows[start : start + 10], start + 1):
         if len(data.rows) > 1:
             lines.append(f"\n{index}.")
         if len(row) >= 15 and source_field(data.expressions.get("deal_id", "")) == "deal_id":
             lines.extend(render_detail(row, data, lang))
             continue
         for key, value in row.items():
+            if source_field(data.expressions.get(key, key)) in {"source_file", "source_row"}:
+                continue
             field = source_field(data.expressions.get(key, key))
             lines.append(
                 f"{label(data.expressions.get(key, key), lang)}: {format_value(value, lang, field)}"
@@ -411,7 +416,12 @@ def render_answer(answer: Answer) -> str:
     )
     if record_count != 1:
         lines.append(
-            tr(("Hisobga olingan yozuvlar", "Учтено записей"), lang)
+            tr(
+                ("Hisobga olingan yozuvlar", "Учтено записей")
+                if data.table == "registry"
+                else ("Topilgan yozuvlar", "Найдено записей"),
+                lang,
+            )
             + f": {record_count:,}".replace(",", " ")
         )
     expressions = " ".join(data.expressions.values()).lower()
@@ -441,8 +451,8 @@ def render_answer(answer: Answer) -> str:
         lines.append(
             tr(
                 (
-                    f"Ko‘rsatilgan: {min(len(data.rows), 10)} natija. CSVda: {len(data.rows)} qator.",
-                    f"Показано: {min(len(data.rows), 10)} результатов. В CSV: {len(data.rows)} строк.",
+                    f"Ko‘rsatilgan: {start + 1} dan {min(start + 10, len(data.rows))} gacha. Jami natija: {len(data.rows)}.",
+                    f"Показаны записи с {start + 1} по {min(start + 10, len(data.rows))}. Всего в результате: {len(data.rows)}.",
                 ),
                 lang,
             )
@@ -453,8 +463,8 @@ def render_answer(answer: Answer) -> str:
         lines.append(
             tr(
                 (
-                    "Natija dastlabki 100 qator bilan cheklangan.",
-                    "Результат ограничен первыми 100 строками.",
+                    f"Natija dastlabki {data.row_limit} qator bilan cheklangan.",
+                    f"Результат ограничен первыми {data.row_limit} строками.",
                 ),
                 lang,
             )

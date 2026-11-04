@@ -23,6 +23,7 @@ from aiogram.types import (
 )
 
 from uzex.config import Settings, require_credentials
+from uzex.downloads import requested_source_file, source_csv
 from uzex.engine import Engine, guess_language
 from uzex.interface import main_keyboard, menu_action, telegram_html
 from uzex.interface import text as ui_text
@@ -44,7 +45,9 @@ def language_keyboard():
     )
 
 
-def evidence_keyboard(job_id: str, language: str, include_csv: bool = True):
+def evidence_keyboard(
+    job_id: str, language: str, include_csv: bool = True, row_count: int = 0, page: int = 0
+):
     buttons = [
         InlineKeyboardButton(
             text=tr(("Manbalar", "Источники"), language), callback_data=f"sources:{job_id}"
@@ -56,7 +59,43 @@ def evidence_keyboard(job_id: str, language: str, include_csv: bool = True):
                 text=tr(("CSV yuklash", "Скачать CSV"), language), callback_data=f"csv:{job_id}"
             )
         )
-    return InlineKeyboardMarkup(inline_keyboard=[buttons])
+    keyboard = [buttons]
+    navigation = []
+    if page > 0:
+        navigation.append(
+            InlineKeyboardButton(
+                text=tr(("Oldingi 10 ta", "Предыдущие 10"), language),
+                callback_data=f"page:{job_id}:{page - 1}",
+            )
+        )
+    if (page + 1) * 10 < row_count:
+        navigation.append(
+            InlineKeyboardButton(
+                text=tr(("Keyingi 10 ta", "Следующие 10"), language),
+                callback_data=f"page:{job_id}:{page + 1}",
+            )
+        )
+    if navigation:
+        keyboard.append(navigation)
+    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+
+
+def csv_caption(answer: Answer) -> str:
+    data = answer.evidence
+    rows, columns = len(data.rows), len(data.rows[0]) if data.rows else 0
+    caption = tr(
+        (
+            f"Javob jadvali\nQatorlar: {rows}. Ustunlar: {columns}.",
+            f"Таблица ответа\nСтрок: {rows}. Столбцов: {columns}.",
+        ),
+        answer.language,
+    )
+    if data.truncated:
+        caption += tr(
+            (f"\nDastlabki {data.row_limit} qator.", f"\nПервые {data.row_limit} строк."),
+            answer.language,
+        )
+    return caption
 
 
 class Service:
@@ -169,27 +208,29 @@ class Service:
                     "menu_at": 0,
                     "ui_language": language,
                 }
+            page = 0
+            if action == "page":
+                key, _, page_value = key.rpartition(":")
+                if not page_value.isdecimal() or len(page_value) > 5:
+                    return {"texts": [ui_text("expired", language)]}
+                page = int(page_value)
             answer = self.state.answer_for(key, chat_id)
+            if answer and answer.evidence and action == "page":
+                if page > max((len(answer.evidence.rows) - 1) // 10, 0):
+                    return {"texts": [ui_text("expired", language)]}
+                return {
+                    "texts": split_text(render_answer(answer, page)),
+                    "answer": answer.model_dump(mode="json"),
+                    "source_job_id": key,
+                    "page": page,
+                }
             if answer and answer.evidence and action == "sources":
                 return {"texts": split_text(render_sources(answer.evidence, answer.language))}
             if answer and answer.evidence and action == "csv":
-                data = answer.evidence
-                rows, columns = len(data.rows), len(data.rows[0]) if data.rows else 0
-                caption = tr(
-                    (
-                        f"Javob jadvali\nQatorlar: {rows}. Ustunlar: {columns}.",
-                        f"Таблица ответа\nСтрок: {rows}. Столбцов: {columns}.",
-                    ),
-                    answer.language,
-                )
-                if data.truncated:
-                    caption += tr(
-                        ("\nDastlabki 100 qator.", "\nПервые 100 строк."), answer.language
-                    )
                 return {
                     "texts": [],
                     "csv_answer": answer.model_dump(mode="json"),
-                    "caption": caption,
+                    "caption": csv_caption(answer),
                 }
             return {"texts": [ui_text("expired", language)]}
         text = (payload.get("text") or "").strip()
@@ -233,6 +274,19 @@ class Service:
             return {"texts": [ui_text("help", language)], "menu_at": 0, "ui_language": language}
         if len(text) > 6000:
             return {"texts": [ui_text("shorten", language)]}
+        filename = requested_source_file(text)
+        if filename:
+            _, count, columns = await asyncio.to_thread(source_csv, self.engine.database, filename)
+            reply_language = guess_language(text)
+            caption = tr(
+                (
+                    f"{filename}\nQatorlar: {count}. Ustunlar: {columns}.",
+                    f"{filename}\nСтрок: {count}. Столбцов: {columns}.",
+                ),
+                reply_language,
+            )
+            self.state.remember(chat_id, text, caption)
+            return {"texts": [], "source_csv": filename, "caption": caption}
         remaining = self.engine.settings.answer_timeout_seconds - (time.time() - job["received"])
         if remaining <= 1:
             answer = Answer(outcome="error", language=guess_language(text))
@@ -249,7 +303,11 @@ class Service:
         rendered = render_answer(answer)
         if answer.outcome != "error":
             self.state.remember(chat_id, text, rendered)
-        return {"texts": split_text(rendered), "answer": answer.model_dump(mode="json")}
+        result = {"texts": split_text(rendered), "answer": answer.model_dump(mode="json")}
+        if answer.outcome == "answer" and answer.evidence and len(answer.evidence.rows) > 10:
+            result["attach_csv"] = True
+            result["caption"] = csv_caption(answer)
+        return result
 
     async def deliver(self, job: dict, result: dict):
         texts = result["texts"]
@@ -263,7 +321,11 @@ class Service:
                     markup = language_keyboard()
                 elif answer and answer.evidence:
                     markup = evidence_keyboard(
-                        job["id"], answer.language, bool(answer.evidence.rows)
+                        result.get("source_job_id", job["id"]),
+                        answer.language,
+                        bool(answer.evidence.rows),
+                        len(answer.evidence.rows),
+                        result.get("page", 0),
                     )
             await self.bot.send_message(
                 job["chat_id"], telegram_html(texts[index]), reply_markup=markup, parse_mode="HTML"
@@ -271,11 +333,23 @@ class Service:
             self.state.sent_part(job["id"], index + 1)
             if index < len(texts) - 1:
                 await asyncio.sleep(1.05)
-        if result.get("csv_answer") and job["next_part"] <= len(texts):
-            csv_answer = Answer.model_validate(result["csv_answer"])
+        if (result.get("csv_answer") or result.get("attach_csv")) and job["next_part"] <= len(
+            texts
+        ):
+            csv_answer = Answer.model_validate(result.get("csv_answer") or result["answer"])
             await self.bot.send_document(
                 job["chat_id"],
                 BufferedInputFile(export_csv(csv_answer.evidence), filename="uzex21-result.csv"),
+                caption=result.get("caption"),
+            )
+            self.state.sent_part(job["id"], len(texts) + 1)
+        if result.get("source_csv") and job["next_part"] <= len(texts):
+            contents, _, _ = await asyncio.to_thread(
+                source_csv, self.engine.database, result["source_csv"]
+            )
+            await self.bot.send_document(
+                job["chat_id"],
+                BufferedInputFile(contents, filename=result["source_csv"]),
                 caption=result.get("caption"),
             )
             self.state.sent_part(job["id"], len(texts) + 1)
