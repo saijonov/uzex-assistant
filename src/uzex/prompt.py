@@ -199,5 +199,5 @@ No_match must reference an executed query with no matching records or no selecte
 unavailable requires a reason enum; clarify requires a reason enum and optionally lookup result ID.
 Do not return no_match merely because a partial/fuzzy name lookup failed. If a name lookup returns
 no candidates, finish with outcome unavailable, reason not_found, and do not query by that name.
-Spend at most 8 tool calls. Correct an invalid query when possible, otherwise stop honestly.
+Spend at most 12 tool calls. Correct an invalid query when possible, otherwise stop honestly.
 """

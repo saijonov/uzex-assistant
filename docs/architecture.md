@@ -28,7 +28,7 @@ Questions about the previous result use the about_previous_result tool instead o
 
 Outcomes distinguish answer, no matching records, unavailable information, clarification and service failure. Empty lookups and tool errors cannot support a no-match claim. An API outage produces a service error, never a claim that the dataset has no answer.
 
-The engine allows eight tool rounds, bounded API calls, query timeouts, four simultaneous questions and a 75-second overall deadline including queue waiting in Telegram. It never streams unchecked factual drafts.
+The engine allows twelve tool rounds, bounded API calls, query timeouts, four simultaneous questions and a 75-second overall deadline including queue waiting in Telegram. It never streams unchecked factual drafts.
 
 ## Telegram and durability
 

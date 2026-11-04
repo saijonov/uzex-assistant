@@ -365,3 +365,26 @@ async def test_wrong_unit_price_is_corrected_before_answering(sample_database):
     )
     assert answer.outcome == "answer"
     assert "mass_kg" in answer.evidence.sql
+
+
+async def test_corrections_have_room_to_finish(sample_database):
+    lookup = ("lookup_entities", {"kind": "region", "text": "Namangan"})
+    client = ScriptedClient(
+        [
+            review(task="count"),
+            *[lookup] * 9,
+            ("query_registry", {"sql": "SELECT COUNT(*) AS n FROM registry"}),
+            finish(),
+        ]
+    )
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer("Сколько?")
+    assert answer.outcome == "answer"
+    assert len(client.requests) == 12
+
+
+async def test_round_limit_still_ends_a_request_that_never_finishes(sample_database):
+    lookup = ("lookup_entities", {"kind": "region", "text": "Namangan"})
+    client = ScriptedClient([review(task="count"), *[lookup] * 40])
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer("Сколько?")
+    assert answer.outcome == "error"
+    assert len(client.requests) == 12

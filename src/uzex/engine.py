@@ -168,7 +168,7 @@ class Engine:
                 }
             )
         messages.append({"role": "user", "content": question[:6000]})
-        for _ in range(8):
+        for _ in range(12):
             response = await self.client.responses.create(
                 model=self.settings.openai_model,
                 reasoning={"effort": self.settings.openai_reasoning_effort},
