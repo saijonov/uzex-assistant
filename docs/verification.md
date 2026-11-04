@@ -10,7 +10,7 @@ Imported 500,000 deals, 6,616 contracts, 14,392 participants, 120 brokers and 1,
 
 ## Automated checks
 
-104 offline tests passed. They cover monetary values and lot calculations, date-specific conversion, blank delivery data, compound filters, region aliases, mixed currencies and units, forbidden SQL, strict tools, fabricated evidence IDs, false no-match claims, service failures, concurrent requests, Telegram splitting, update deduplication, restart recovery, chat ordering, ownership checks and command/reply handlers.
+119 offline tests passed. They cover monetary values and lot calculations, date-specific conversion, blank delivery data, compound filters, region aliases, mixed currencies and units, forbidden SQL, strict tools, fabricated evidence IDs, false no-match claims, service failures, concurrent requests, Telegram splitting, update deduplication, restart recovery, chat ordering, ownership checks and command/reply handlers.
 
 Lint and format checks passed. CI repeats offline checks on every push and builds the Python package without credentials or the full private dataset.
 

@@ -148,5 +148,11 @@
         "matches_original_records": true
       }
     }
+  },
+  "greeting_review": {
+    "offline_tests": 119,
+    "standalone_greetings_use_model": false,
+    "conversation_and_menu_language_preserved": true,
+    "greeting_with_question_routes_to_answer_engine": true
   }
 }

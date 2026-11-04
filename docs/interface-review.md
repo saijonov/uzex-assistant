@@ -34,7 +34,7 @@ The official task page at https://hackathon.uzex.uz/saralash/ remained inaccessi
 
 ## Verification
 
-104 offline tests pass, including optional onboarding, persistent keyboards, language changes without history loss, cross-language questions, explicit language requests, whitespace input, HTML escaping, CSV shape and formula protection, and no empty CSV for absent records.
+119 offline tests pass, including optional onboarding, persistent keyboards, language changes without history loss, cross-language questions, explicit language requests, whitespace input, HTML escaping, CSV shape and formula protection, and no empty CSV for absent records.
 
 Four real API requests through the Telegram service path verified both cross-language menu combinations and both explicit answer-language overrides. The repeated main evaluation passed 100/100, with P95 26.035 seconds and maximum 27.500 seconds. The repeated challenge evaluation passed 32/32, with P95 12.189 seconds and maximum 12.969 seconds. All 20 safety cases passed. These are observed finite evaluations, not a guarantee for every unseen question.
 
@@ -55,3 +55,7 @@ Directory caps are participants 15000, contracts 7000, brokers 1000 and exchange
 Named requests for `brokers.csv` or `participants.csv` with a send/download action use a separate allowlisted path. CSVs are reconstructed from the imported source fields in original row order with original headings. They preserve all parsed source rows and columns, verified against the supplied archive: 120 brokers with four columns, and 14392 participants with six columns. User text cannot supply a filesystem path or SQL for this operation. Questions about a file's contents are not treated as download commands. Arbitrary filenames and traversal paths are rejected.
 
 The exact live follow-up sequence passed: all sellers returned 392 rows; 'hamma 100 tasi kerak' returned 100 seller rows; '100 ta broker haqida hamma malumotni ber' returned 100 broker rows; the named brokers CSV request prepared all 120 source records. File delivery and pagination are also covered by transport-level tests, including cross-chat access denial, invalid files, distinct pages and complete attachment row counts.
+
+## Greetings
+
+Standalone Uzbek Latin, Uzbek Cyrillic and Russian greetings receive a short greeting and an invitation to ask a question about exchange deals. Assalomu alaykum receives Va alaykum assalom. Matching ignores case, ordinary punctuation and emoji. These replies do not use the model, clear history or change the menu preference. A greeting followed by an actual question continues through the normal answer engine. Regression tests cover both routing behaviors and preserved conversation history.
