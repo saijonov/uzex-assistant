@@ -23,8 +23,10 @@ RECORD_WORDS = (
 )
 NUMBER_FILLER = r"(?: (?:raqam\w*|nomer\w*))?"
 NOT_AN_IDENTIFIER = (
-    r"(?! (?:so?m\w*|sum\w*|dollar\w*|usd|rubl\w*|dan|ta|tadan|tonn\w*|kg|lot\w*|dona\w*)\b)"
+    r"(?! (?:so?m\w*|sum\w*|dollar\w*|usd|rubl\w*|dan|ta|tadan|tonn\w*|kg|lot\w*|dona\w*|"
+    r"yil\w*|god\w*|xona\w*|tsifr\w*|znak\w*|raqam\w*)\b)"
 )
+ASKS_HOW_MANY_EXIST = re.compile(r"\b(?:bormi|bor mi|est|yest|imeetsya)\b")
 NUMBER_BEFORE_WORD = re.compile(rf"\b(?P<number>\d+){NUMBER_FILLER} {RECORD_WORDS}\b")
 WORD_BEFORE_NUMBER = re.compile(
     rf"\b{RECORD_WORDS}{NUMBER_FILLER} (?P<number>\d+)\b{NOT_AN_IDENTIFIER}"
@@ -227,10 +229,13 @@ def missing_requirements(
 
 def malformed_identifier(question: str) -> str | None:
     value = normalize(question)
-    for pattern in (NUMBER_BEFORE_WORD, WORD_BEFORE_NUMBER):
+    patterns = [WORD_BEFORE_NUMBER]
+    if not ASKS_HOW_MANY_EXIST.search(value):
+        patterns.append(NUMBER_BEFORE_WORD)
+    for pattern in patterns:
         for match in pattern.finditer(value):
             number = match["number"]
-            if match["tax"] and len(number) != 9:
+            if match["tax"] and len(number) != 9 and not YEAR.fullmatch(number):
                 return number
             if match["company"] and len(number) >= 7 and len(number) != 9:
                 return number

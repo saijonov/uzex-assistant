@@ -121,3 +121,34 @@ async def test_choice_continues_with_the_corrected_number(tmp_path, sample_datab
         if isinstance(item, dict)
     )
     service.state.close()
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Eng ko'p bitim qilgan xaridorning STIRi 2025-yilda qaysi?",
+        "Какой у него ИНН 2025 год?",
+        "2025 STIRlar soni qancha?",
+        "STIR 9 xonali bo'ladimi?",
+        "ИНН 9 цифр или нет?",
+        "STIR 9 raqamli bo'ladimi?",
+        "Reyestrda 1000000 bitim bormi?",
+        "В реестре есть 1000000 сделок?",
+        "2000000 kompaniya bormi?",
+    ],
+)
+def test_years_lengths_and_quantities_are_not_record_numbers(question):
+    assert malformed_identifier(question) is None
+
+
+@pytest.mark.parametrize(
+    "question,number",
+    [
+        ("1000001 firma haqida", "1000001"),
+        ("ИНН 921912", "921912"),
+        ("12345 STIRli kompaniya", "12345"),
+        ("STIR 12345 qaysi kompaniya?", "12345"),
+    ],
+)
+def test_short_or_long_identifiers_are_still_recognised(question, number):
+    assert malformed_identifier(question) == number
