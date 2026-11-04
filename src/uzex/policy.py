@@ -61,6 +61,9 @@ MENTIONS_CANCELLED = re.compile(
     r"\bbekor\b|\bannul\w*|\botmen\w*|\bcancel\w*|\bbarcha holat\w*|\bvse\w* sostoyan\w*|"
     r"\btolanmagan\w*|\bneoplach\w*|\bneoplat\w*|\bsotilmay\w*|\bsotilmagan\w*|\bneprodan\w*"
 )
+MONEY_MEASURE = re.compile(
+    r"\b(?:amount|amount_uzs|amount_usd|volume|delivered_volume|mass_kg|mass_t|unit_price)\b"
+)
 PER_KILOGRAM = re.compile(r"\b(?:kg|kilo\w*)\b")
 PER_TONNE = re.compile(r"\btonn\w*\b")
 PERCENT_WORDS = re.compile(r"\b(?:foiz\w*|ulush\w*|protsent\w*|dol[yiu]\w*)\b")
@@ -282,6 +285,10 @@ def bare_record_number(review: RequestReview, question: str, pending: dict | Non
 def cancellation_gap(review: RequestReview, question: str, data) -> str | None:
     if not data.cancelled_records:
         return None
+    measures = [item for item in data.expressions.values() if AGGREGATE_EXPRESSION.match(item)]
+    plain = [item for item in measures if "is_cancelled" not in item]
+    if measures and not plain:
+        return None
     value = normalize(question)
     if EXCLUDES_CANCELLED.search(value) and not KEEPS_CANCELLED.search(value):
         return (
@@ -292,6 +299,7 @@ def cancellation_gap(review: RequestReview, question: str, data) -> str | None:
         review.task in {"turnover", "price"}
         and review.subject not in {"deal", "contract"}
         and not MENTIONS_CANCELLED.search(value)
+        and (not measures or any(MONEY_MEASURE.search(item) for item in plain))
     ):
         return (
             f"Turnover and prices exclude cancelled deals by default, and this result counts "

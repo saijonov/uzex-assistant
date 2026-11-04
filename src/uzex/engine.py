@@ -102,7 +102,9 @@ TOOLS = [
     tool(
         "finish",
         Finish,
-        "End the turn using a real evidence ID or a fixed unavailable/clarification reason.",
+        "End the turn using a real evidence ID or a fixed unavailable/clarification reason. When "
+        "the user asked several things, query_id is the first result and also_query_ids lists the "
+        "others in the user's order; otherwise also_query_ids is empty. Never list trial queries.",
     ),
 ]
 
@@ -430,22 +432,31 @@ class Engine:
                     elif call.name == "finish":
                         finish = Finish.model_validate(arguments)
                         data = evidence.get(finish.query_id)
+                        extras = []
                         if finish.outcome in {"answer", "no_match"}:
                             if data is None:
                                 raise ValueError("Answer needs an executed evidence ID")
+                            for other in finish.also_query_ids:
+                                if other not in evidence:
+                                    raise ValueError(f"Unknown evidence ID {other}")
+                                if other != finish.query_id and evidence[other] not in extras:
+                                    extras.append(evidence[other])
                             empty = data.matched_count == 0 or not data.rows
                             if finish.outcome == "no_match" and not empty:
                                 raise ValueError("No-match claim contradicts returned data")
-                            if finish.outcome == "answer" and empty:
+                            if finish.outcome == "answer" and empty and not extras:
                                 finish.outcome = "no_match"
+                            parts = [data, *extras]
                             if finish.outcome == "answer":
                                 context = " ".join([question, (pending or {}).get("question", "")])
-                                wrong_scope = cancellation_gap(review, context, data) or unit_gap(
-                                    context, data
-                                )
-                                if wrong_scope:
-                                    raise ValueError(wrong_scope)
-                            gap = answer_gap(review, question, data)
+                                for part in parts:
+                                    wrong_scope = cancellation_gap(
+                                        review, context, part
+                                    ) or unit_gap(context, part)
+                                    if wrong_scope:
+                                        raise ValueError(wrong_scope)
+                            gaps = [answer_gap(review, question, part) for part in parts]
+                            gap = gaps[0] if all(gaps) else None
                             if gap and finish.outcome == "answer" and not gap_reported:
                                 gap_reported = True
                                 raise ValueError(gap)
@@ -456,6 +467,7 @@ class Engine:
                             language=language or finish.language,
                             reason=finish.reason,
                             evidence=data,
+                            extra_evidence=extras,
                             candidates=lookups.get(finish.candidates_query_id, [])[:5],
                             continues_pending=review.continuation,
                         )

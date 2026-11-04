@@ -123,6 +123,7 @@ class Finish(StrictModel):
         "out_of_scope",
     ]
     candidates_query_id: str | None
+    also_query_ids: list[str]
 
 
 class Evidence(BaseModel):
@@ -166,6 +167,7 @@ class Answer(BaseModel):
     topic: str | None = None
     identifier: str | None = None
     evidence: Evidence | None = None
+    extra_evidence: list[Evidence] = Field(default_factory=list)
     candidates: list[dict] = Field(default_factory=list)
     elapsed_seconds: float = 0
     request_id: str = ""

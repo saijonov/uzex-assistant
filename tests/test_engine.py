@@ -49,7 +49,7 @@ def review(**overrides):
     return "review_request", {**values, **overrides}
 
 
-def finish(outcome="answer", query_id="q1", reason="none"):
+def finish(outcome="answer", query_id="q1", reason="none", also=None):
     return (
         "finish",
         {
@@ -58,6 +58,7 @@ def finish(outcome="answer", query_id="q1", reason="none"):
             "reason": reason,
             "language": "ru",
             "candidates_query_id": None,
+            "also_query_ids": also or [],
         },
     )
 

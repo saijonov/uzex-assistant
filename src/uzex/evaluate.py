@@ -200,13 +200,20 @@ async def evaluate_conversations(
                 stored = json.loads(row["result"]) if row and row["result"] else {}
                 answer = stored.get("answer") or {}
                 evidence = answer.get("evidence") or {}
+                others = answer.get("extra_evidence") or []
                 seen = {
                     "text": "\n".join(bot.messages),
                     "outcome": answer.get("outcome"),
                     "language": answer.get("language"),
                     "files": bot.files,
-                    "sql": evidence.get("sql"),
-                    "rows": evidence.get("rows") or [],
+                    "sql": " ; ".join(
+                        filter(None, [evidence.get("sql"), *(part["sql"] for part in others)])
+                    )
+                    or None,
+                    "rows": [
+                        *(evidence.get("rows") or []),
+                        *(row for part in others for row in part["rows"]),
+                    ],
                 }
                 problems = grade_turn(turn, seen, previous)
                 turns.append(
@@ -216,7 +223,7 @@ async def evaluate_conversations(
                         "problems": problems,
                         "outcome": seen["outcome"],
                         "sql": seen["sql"],
-                        "text": seen["text"][:1500],
+                        "text": seen["text"][:3000],
                         "files": seen["files"],
                     }
                 )
