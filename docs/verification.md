@@ -80,30 +80,31 @@ Findings fixed afterwards:
 | Query rules refused answerable questions | Median, groups over a threshold, buyers without deals, broker rankings |
 | File intent matched word fragments | `nomini csv qilib ber` sent no file |
 
-Offline results for the fixed code: 392 tests passed, lint and format checks passed. The 221 new tests use a scripted model or no model. A full 500,000-deal import was built with the new importer, and the audit's correct queries were run through the real query layer. Their results match values calculated separately in DuckDB and by `scripts/build_hard.py` from the raw CSVs. An older dataset still loads under the new code, and the new dataset loads under the old code.
+Offline results for the final code: 571 tests passed and 3 skipped because the small fixture lacks those products, with lint and format checks passing. The 403 new tests use a scripted model or no model. A full 500,000-deal import was built with the new importer, and the audit's correct queries were run through the real query layer. Their results match values calculated separately in DuckDB and by `scripts/build_hard.py` from the raw CSVs. An older dataset still loads under the new code, and the new dataset loads under the old code.
 
-**Not yet verified with the production model.** The prompt and the new about_previous_result tool change how the model behaves, and offline tests cannot show that it will use them as intended. No accuracy claim for `gpt-6.1-sol` should be made until these sets are rerun on it.
+## Live runs after the fixes
 
-## Low-cost model run
+All runs used the real service and full dataset, with Telegram replaced by a recorder. The earlier sets ran without a forced answer language for the first time.
 
-All three sets ran through the real service and full dataset on `gpt-6-luna` with low reasoning effort, to limit spending. The earlier sets ran without a forced answer language for the first time. These results describe that cheaper model, not the production model.
+The first low-cost run, on `gpt-6-luna` with low effort, passed 198 of 219 and exposed 21 failures: five wrong numbers stated as fact, ten unnecessary questions, two questions instead of refusals, two defensible readings and two expectations that were too strict. The wrong numbers were "excluding cancelled" read as "only cancelled" in three Uzbek turnover cases, a cancelled share of 100% and growth of 0%. The application did not stop them, so it gained checks that do not depend on the model.
+
+Final low-cost run on the finished code:
 
 | Set | Passed | P95 | Slowest |
 |---|---:|---:|---:|
-| Natural conversations (`hard.json`) | 73/87 | 10.358 s | 12.541 s |
-| Main bilingual set | 97/100 | 8.413 s | 10.215 s |
-| Challenge set | 28/32 | 8.026 s | 17.834 s |
+| Natural conversations (`hard.json`) | 95/96 | 9.959 s | 13.283 s |
+| Main bilingual set | 99/100 | 5.729 s | 8.262 s |
+| Challenge set | 32/32 | 9.063 s | 11.556 s |
 
-The run used 673 requests, 4,475,952 input tokens (4,139,978 cached) and 33,534 output tokens, with no API errors.
+The two failures vary between runs on this cheaper model. A price per kilogram of sugar filtered on `unit='килограмм'` and reported no records, although sugar is sold in tonnes. A question about January 2027 reported no matching records instead of the unavailable outcome, which invents nothing.
 
-The 21 failures:
+Production model run on `gpt-6.1-sol` with medium effort, covering 48 conversations chosen from the critical set and every earlier failure:
 
-| Group | Cases | What happened |
-|---|---:|---|
-| Wrong number stated as fact | 5 | "Excluding cancelled" read as "only cancelled" in three Uzbek turnover cases; a cancelled share of 100%; growth of 0% |
-| Unnecessary question | 10 | Asked which product when the question named it (including `Shakar narxi`), asked city or region after `в городе Ташкент`, and asked for a record during a ranking |
-| Question instead of refusal | 2 | Profit and paid VAT |
-| Different but defensible reading | 2 | Median grouped by currency; Fergana counted by company registration instead of warehouse, with the filter shown in the answer |
-| Expectation too strict | 2 | A correct share list ordered by region pushed the expected row to page two; a correct broker name without its code |
+| Set | Passed | P95 | Slowest |
+|---|---:|---:|---:|
+| Selected conversations | 33/34 | 11.009 s | 12.804 s |
+| Selected earlier cases | 14/14 | 12.095 s | 12.095 s |
 
-The application did not stop the wrong numbers, so they need checks that do not depend on the model.
+The one failure was a false "name not found" for the inflected word `shakarning`. After that fix, six related conversations were rerun on the production model and all passed. The other 42 were not rerun after the last three small commits. The full 228 conversations have not been run on the production model, and no real Telegram account has tested this version. These are finite results, not a guarantee for unseen questions.
+
+An earlier production run in this round reported 0 of 48. That was a defect in the temporary test script, not in the application: a variable name clash made every request fail after its first model call.
