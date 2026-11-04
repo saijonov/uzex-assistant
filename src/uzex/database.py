@@ -32,6 +32,9 @@ ROW_LIMITS = {
     "brokers": 1000,
     "usd_rates": 2000,
 }
+GROUPED_ROW_LIMIT = 20000
+LARGEST_ASKED_LIMIT = 500000
+BROKER_SCOPE_COLUMNS = {"broker_code", "broker_name", "broker_side", "broker_region"}
 FUNCTIONS = {
     "AND",
     "OR",
@@ -330,6 +333,41 @@ def validate_membership_subquery(select: exp.Select, root: exp.Select) -> None:
         raise ValueError("A membership subquery selects one column from one approved table")
 
 
+def row_limit_for(tree: exp.Select, table: str) -> int:
+    if table in DEAL_TABLES and (tree.args.get("group") or tree.args.get("distinct")):
+        return GROUPED_ROW_LIMIT
+    return ROW_LIMITS[table]
+
+
+def validate_broker_scope(tree: exp.Select) -> None:
+    aggregates = list(tree.find_all(exp.AggFunc))
+    if not aggregates:
+        return
+    columns = {
+        column.name
+        for part in (tree.args.get("where"), tree.args.get("group"))
+        if part
+        for column in part.find_all(exp.Column)
+    }
+    if tree.args.get("group"):
+        columns |= {
+            column.name
+            for item in tree.expressions
+            if not item.find(exp.AggFunc)
+            for column in item.find_all(exp.Column)
+        }
+    if columns & BROKER_SCOPE_COLUMNS:
+        return
+    if all(
+        isinstance(item, exp.Count) and isinstance(item.this, exp.Distinct) for item in aggregates
+    ):
+        return
+    raise ValueError(
+        "broker_deals has one row per deal and broker, so this total counts deals twice. "
+        "Use registry for totals, and broker_deals only to group or filter by broker."
+    )
+
+
 def validate_select(tree: exp.Select) -> str:
     allowed_clauses = {
         "expressions",
@@ -404,8 +442,10 @@ def validate_select(tree: exp.Select) -> str:
             limit_value = int(limit.expression.this)
         except (ValueError, AttributeError, TypeError) as error:
             raise ValueError("Limit must be an integer") from error
-        if not 1 <= limit_value <= ROW_LIMITS[table.name]:
-            raise ValueError(f"Limit must be between 1 and {ROW_LIMITS[table.name]}")
+        if not 1 <= limit_value <= LARGEST_ASKED_LIMIT:
+            raise ValueError(f"Limit must be between 1 and {LARGEST_ASKED_LIMIT}")
+    if table.name == "broker_deals":
+        validate_broker_scope(tree)
     return table.name
 
 
@@ -649,8 +689,10 @@ class Database:
     def query(self, sql: str, query_id: str, timeout: float = 8) -> Evidence:
         tree, table = validate_query(sql)
         self.check_filter_values(tree)
-        row_limit = ROW_LIMITS[table]
-        if not tree.args.get("limit"):
+        row_limit = row_limit_for(tree, table)
+        limit = tree.args.get("limit")
+        asked = int(limit.expression.this) if limit else None
+        if asked is None or asked > row_limit:
             tree = tree.limit(row_limit + 1)
         with self.connect() as db:
             timer = threading.Timer(timeout, db.interrupt)
@@ -814,6 +856,7 @@ class Database:
                     if tree.args.get("where")
                     else None,
                     truncated=len(rows) > row_limit,
+                    requested_count=asked if asked and len(rows) > row_limit else None,
                     row_limit=row_limit,
                     expressions=expressions,
                     selected_record_count=selected_count,

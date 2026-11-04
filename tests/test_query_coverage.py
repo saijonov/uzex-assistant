@@ -168,7 +168,9 @@ def test_broker_ranking_counts_each_deal_once_for_either_side(sample_database):
 
 
 def test_broker_deals_shows_its_source_and_cannot_be_sampled(sample_database):
-    data = sample_database.query("SELECT COUNT(*) AS n FROM broker_deals", "q1")
+    data = sample_database.query(
+        "SELECT broker_code, COUNT(*) AS n FROM broker_deals GROUP BY broker_code", "q1"
+    )
     text = render_answer(Answer(outcome="answer", language="ru", evidence=data))
     assert "реестр биржевых сделок" in text
     with pytest.raises(ValueError):
