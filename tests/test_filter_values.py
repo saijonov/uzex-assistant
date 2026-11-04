@@ -75,3 +75,58 @@ async def test_invented_value_makes_the_model_correct_itself_instead_of_no_match
     assert answer.outcome == "answer"
     assert answer.evidence.sql == real
     assert answer.evidence.rows[0]["n"] > 0
+
+
+@pytest.mark.parametrize(
+    "kind,text",
+    [
+        ("company", "Imaginary LLC"),
+        ("company", "Zamin Textile MChJ"),
+        ("company", "FAKE_COMPANY_7E2F91"),
+        ("broker", "Nonexistent Broker"),
+        ("company", "123456789"),
+    ],
+)
+def test_a_name_that_does_not_exist_has_no_candidates(sample_database, kind, text):
+    assert sample_database.lookup(kind, text) == []
+
+
+def test_misspelled_name_finds_the_real_company_first(sample_database):
+    rows = sample_database.lookup("company", "Rukushu fermer")
+    assert rows[0]["name"] == "RUKUSHO‘ FERMER MCHJ"
+
+
+def test_generic_legal_words_alone_do_not_make_a_match(sample_database):
+    rows = sample_database.lookup("company", "Rukushu MChJ")
+    assert rows == [] or rows[0]["name"] == "RUKUSHO‘ FERMER MCHJ"
+
+
+def test_a_generic_word_can_still_be_searched_directly(sample_database):
+    assert len(sample_database.lookup("company", "MChJ")) > 1
+
+
+def test_part_of_a_tax_number_is_not_matched_loosely(sample_database):
+    inn = sample_database.catalog["company"][0]["inn"]
+    assert all(row["match"] != "fuzzy" for row in sample_database.lookup("company", inn[:8]))
+
+
+async def test_unknown_name_tells_the_model_to_stop_looking(sample_database):
+    client = ScriptedClient(
+        [
+            ("lookup_entities", {"kind": "company", "text": "Imaginary LLC"}),
+            finish("unavailable", None, "not_found"),
+        ]
+    )
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer(
+        "Imaginary LLC nechta bitim qilgan?"
+    )
+    assert answer.outcome == "unavailable"
+    assert answer.reason == "not_found"
+    output = next(
+        item["output"]
+        for item in client.requests[-1]["input"]
+        if isinstance(item, dict)
+        and item.get("type") == "function_call_output"
+        and "candidates" in item["output"]
+    )
+    assert "not_found" in output

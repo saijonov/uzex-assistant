@@ -141,6 +141,21 @@ ENFORCED_VALUE_COLUMNS = {
     "participants": ("region", "name"),
     "brokers": ("region", "name"),
 }
+NAME_LOOKUP_KINDS = {"company", "broker"}
+NAME_MATCH_THRESHOLD = 80
+GENERIC_NAME_WORDS = {
+    "mchj",
+    "aj",
+    "ok",
+    "xk",
+    "qk",
+    "oaj",
+    "llc",
+    "masuliyati",
+    "cheklangan",
+    "jamiyati",
+    "broker",
+}
 PRODUCT_DESCRIPTION_WORDS = {
     "marka",
     "razmer",
@@ -219,6 +234,10 @@ CITY_WORD = re.compile(
 )
 CITY_PREFIX = re.compile(r"\bg (?:toshkent|tashkent)")
 OBLAST_WORD = re.compile(r"\bviloyat\w*|\boblast\w*")
+
+
+def distinctive_name(value: str) -> str:
+    return " ".join(word for word in normalize(value).split() if word not in GENERIC_NAME_WORDS)
 
 
 def named_regions(text: str) -> list[str]:
@@ -547,13 +566,20 @@ class Database:
                 return [{**entry, "match": match, "score": 100.0} for entry in rows]
         alias = PRODUCT_ALIASES.get(needle) if kind == "product" else None
         needles = [needle] + ([normalize(alias)] if alias else [])
+        named = kind in NAME_LOOKUP_KINDS
+        distinct = distinctive_name(text) if named else ""
+        threshold = NAME_MATCH_THRESHOLD if named else 65
         candidates = []
         for entry in self.catalog[kind]:
             values = [normalize(str(value)) for value in entry.values()]
             exact = any(n in values for n in needles)
             partial = any(n and n in v for n in needles for v in values)
-            score = max(fuzz.WRatio(n, v) for n in needles for v in values)
-            if exact or partial or score >= 65:
+            if named:
+                fuzzy_ready = bool(distinct) and not distinct.isdigit()
+                score = fuzz.ratio(distinct, distinctive_name(entry["name"])) if fuzzy_ready else 0
+            else:
+                score = max(fuzz.WRatio(n, v) for n in needles for v in values)
+            if exact or partial or score >= threshold:
                 candidates.append(
                     {
                         **entry,

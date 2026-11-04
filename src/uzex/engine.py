@@ -353,6 +353,11 @@ class Engine:
                             "candidates": rows,
                             "may_be_truncated": len(rows) == 30,
                         }
+                        if not rows and lookup.kind in {"company", "broker", "product"}:
+                            output["note"] = (
+                                "No record has this name. Stop searching and finish with outcome "
+                                "unavailable, reason not_found."
+                            )
                     elif call.name in {"query_registry", "sample_records"}:
                         if ambiguities:
                             raise ValueError(

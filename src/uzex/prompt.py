@@ -196,6 +196,7 @@ An empty result is no_match only if a query actually executed; API/tool errors a
 Finish answer must reference an executed query_id (or calculated result) with actual evidence.
 No_match must reference an executed query with no matching records or no selected groups.
 unavailable requires a reason enum; clarify requires a reason enum and optionally lookup result ID.
-Do not return no_match merely because a partial/fuzzy name lookup failed.
+Do not return no_match merely because a partial/fuzzy name lookup failed. If a name lookup returns
+no candidates, finish with outcome unavailable, reason not_found, and do not query by that name.
 Spend at most 8 tool calls. Correct an invalid query when possible, otherwise stop honestly.
 """
