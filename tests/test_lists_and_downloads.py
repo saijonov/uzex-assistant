@@ -135,6 +135,14 @@ async def test_large_list_automatically_attaches_all_result_rows(tmp_path, sampl
     exported = list(csv.DictReader(io.StringIO(content)))
     assert len(exported) == len(result["answer"]["evidence"]["rows"])
     assert len(exported) > 10
+    outputs = [
+        json.loads(item["output"])
+        for item in client.requests[-1]["input"]
+        if isinstance(item, dict) and item.get("type") == "function_call_output"
+    ]
+    preview = next(output for output in outputs if "result_row_count" in output)
+    assert preview["result_row_count"] == 120
+    assert len(preview["rows"]) == 20
     assert (
         service.bot.messages[-1]["reply_markup"]
         .inline_keyboard[1][0]
