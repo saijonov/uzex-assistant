@@ -82,4 +82,28 @@ Findings fixed afterwards:
 
 Offline results for the fixed code: 392 tests passed, lint and format checks passed. The 221 new tests use a scripted model or no model. A full 500,000-deal import was built with the new importer, and the audit's correct queries were run through the real query layer. Their results match values calculated separately in DuckDB and by `scripts/build_hard.py` from the raw CSVs. An older dataset still loads under the new code, and the new dataset loads under the old code.
 
-**Not yet verified with the real model.** The prompt and the new about_previous_result tool change how the model behaves, and offline tests cannot show that it will use them as intended. `evaluation/hard.json` is ready for that check, with 87 conversations, 113 turns and a 16-conversation `critical` subset. It has not been run, so no accuracy claim should be made from it yet. The earlier 132-case results also predate these changes and need rerunning, now without a forced answer language.
+**Not yet verified with the production model.** The prompt and the new about_previous_result tool change how the model behaves, and offline tests cannot show that it will use them as intended. No accuracy claim for `gpt-6.1-sol` should be made until these sets are rerun on it.
+
+## Low-cost model run
+
+All three sets ran through the real service and full dataset on `gpt-6-luna` with low reasoning effort, to limit spending. The earlier sets ran without a forced answer language for the first time. These results describe that cheaper model, not the production model.
+
+| Set | Passed | P95 | Slowest |
+|---|---:|---:|---:|
+| Natural conversations (`hard.json`) | 73/87 | 10.358 s | 12.541 s |
+| Main bilingual set | 97/100 | 8.413 s | 10.215 s |
+| Challenge set | 28/32 | 8.026 s | 17.834 s |
+
+The run used 673 requests, 4,475,952 input tokens (4,139,978 cached) and 33,534 output tokens, with no API errors.
+
+The 21 failures:
+
+| Group | Cases | What happened |
+|---|---:|---|
+| Wrong number stated as fact | 5 | "Excluding cancelled" read as "only cancelled" in three Uzbek turnover cases; a cancelled share of 100%; growth of 0% |
+| Unnecessary question | 10 | Asked which product when the question named it (including `Shakar narxi`), asked city or region after `в городе Ташкент`, and asked for a record during a ranking |
+| Question instead of refusal | 2 | Profit and paid VAT |
+| Different but defensible reading | 2 | Median grouped by currency; Fergana counted by company registration instead of warehouse, with the filter shown in the answer |
+| Expectation too strict | 2 | A correct share list ordered by region pushed the expected row to page two; a correct broker name without its code |
+
+The application did not stop the wrong numbers, so they need checks that do not depend on the model.
