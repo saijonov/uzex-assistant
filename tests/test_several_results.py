@@ -123,8 +123,9 @@ def test_grading_looks_at_every_part(sample_database):
         outcome="answer",
         language="uz",
         evidence=sample_database.query("SELECT COUNT(*) AS n FROM registry", "q1"),
-        extra_evidence=[sample_database.query("SELECT COUNT(*) AS m FROM contracts", "q2")],
+        extra_evidence=[sample_database.query("SELECT COUNT(*) AS m FROM participants", "q2")],
     )
+    assert answer.extra_evidence[0].rows[0]["m"] != answer.evidence.rows[0]["n"]
     case = {
         "outcomes": ["answer"],
         "language": "uz",
