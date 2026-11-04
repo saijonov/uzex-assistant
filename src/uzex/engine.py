@@ -21,6 +21,7 @@ from uzex.models import (
     SampleQuery,
 )
 from uzex.policy import (
+    answer_gap,
     bare_record_number,
     missing_requirements,
     no_preference,
@@ -152,6 +153,7 @@ class Engine:
         lookups = {}
         review = None
         ambiguities = {}
+        gap_reported = False
         messages = [*history[-8:]]
         if pending:
             messages.append(
@@ -373,6 +375,10 @@ class Engine:
                                 raise ValueError("No-match claim contradicts returned data")
                             if finish.outcome == "answer" and empty:
                                 finish.outcome = "no_match"
+                            gap = answer_gap(review, question, data)
+                            if gap and finish.outcome == "answer" and not gap_reported:
+                                gap_reported = True
+                                raise ValueError(gap)
                         if finish.outcome in {"clarify", "unavailable"} and finish.reason == "none":
                             raise ValueError("A fixed clarification or absence reason is required")
                         return Answer(

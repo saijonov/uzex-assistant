@@ -15,6 +15,8 @@ RECORD_NUMBER = re.compile(r"\b\d{6}\b")
 RECORD_KIND_WORDS = re.compile(
     r"\b(?:bitim\w*|sdelk\w*|sdelok|shartnoma\w*|kontrakt\w*|deal\w*|contract\w*)\b"
 )
+PERCENT_WORDS = re.compile(r"\b(?:foiz\w*|ulush\w*|protsent\w*|dol[yiu]\w*)\b")
+AGGREGATE_EXPRESSION = re.compile(r"(?:COUNT|SUM|MIN|MAX|MEDIAN)\(", re.IGNORECASE)
 NO_PREFERENCE = re.compile(
     r"\b(?:farqi? (?:yoq|yuq)|farq qilmaydi|bilmadim|bilmayman|istalgan\w*|ahamiyati yoq|"
     r"nevajno|vse ravno|bez raznitsi|ne znayu|lyub\w*|any|dont know|doesnt matter)\b"
@@ -138,6 +140,29 @@ def bare_record_number(review: RequestReview, question: str, pending: dict | Non
         return None
     match = RECORD_NUMBER.search(context)
     return match.group() if match else None
+
+
+def answer_gap(review: RequestReview, question: str, data) -> str | None:
+    if not data.rows:
+        return None
+    expressions = [data.expressions[key] for key in data.rows[0] if key in data.expressions]
+    if review.task == "rank" and all(AGGREGATE_EXPRESSION.match(item) for item in expressions):
+        return (
+            "The user asked who or what ranks highest, and this result does not name it. "
+            "Select the code or name with GROUP BY and ORDER BY the metric."
+        )
+    asks_percent = "%" in question or PERCENT_WORDS.search(normalize(question))
+    is_percent = (data.calculation or "").partition("(")[0] in {
+        "percentage",
+        "change_percent",
+        "share_percent",
+    }
+    if asks_percent and not is_percent and "deposit_percent" not in data.sql:
+        return (
+            "The user asked for a percentage, and this result has none. Use calculate_ratio with "
+            "percentage, change_percent or share_percent on this result."
+        )
+    return None
 
 
 def no_preference(question: str) -> bool:
