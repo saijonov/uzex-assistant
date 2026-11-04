@@ -77,48 +77,48 @@ LABELS = {
     "warehouse_address": ("Ombor manzili", "Адрес склада"),
     "registered_on": ("Ro‘yxatdan o‘tgan sana", "Дата регистрации"),
     "valid_until": ("Amal qilish muddati", "Действует до"),
-    "seller_vat_payer": ("Sotuvchi QQS to‘lovchisi", "Продавец — плательщик НДС"),
-    "buyer_vat_payer": ("Xaridor QQS to‘lovchisi", "Покупатель — плательщик НДС"),
+    "seller_vat_payer": ("Sotuvchi QQS to‘lovchisi", "Продавец, плательщик НДС"),
+    "buyer_vat_payer": ("Xaridor QQS to‘lovchisi", "Покупатель, плательщик НДС"),
 }
 TEXT = {
-    "answer": ("Ma’lumotlar bo‘yicha natija", "Результат по данным"),
+    "answer": ("Natija", "Результат"),
     "no_match": (
-        "Berilgan shartlarga mos yozuvlar topilmadi.",
-        "Записей по заданным условиям не найдено.",
+        "Bu shartlarga mos yozuv topilmadi.",
+        "Записей по этим условиям нет.",
     ),
     "error": (
-        "Xizmat vaqtincha javob bera olmadi. Qayta urinib ko‘ring. Bu ma’lumot yo‘qligini anglatmaydi.",
-        "Сервис временно не смог ответить. Повторите запрос. Это не означает отсутствие данных.",
+        "Javobni hisoblay olmadik. Qayta urinib ko‘ring. Bu ma’lumot yo‘q degani emas.",
+        "Не удалось получить ответ. Попробуйте ещё раз. Это не значит, что данных нет.",
     ),
     "outside_dates": (
-        "So‘ralgan davr to‘liq ma’lumotlarda mavjud emas. Ma’lumotlar: 03.01.2022–30.10.2026.",
-        "Запрошенный период не полностью покрыт данными. Доступны данные за 03.01.2022–30.10.2026.",
+        "Bu davr uchun to‘liq ma’lumot yo‘q. Bitimlar: 03.01.2022 dan 30.10.2026 gacha.",
+        "За этот период нет полных данных. Сделки: с 03.01.2022 по 30.10.2026.",
     ),
     "missing_field": (
-        "Bu ma’lumot berilgan to‘plamda mavjud emas.",
-        "Эта информация отсутствует в предоставленном наборе данных.",
+        "Bu ma’lumot reyestrda yo‘q.",
+        "Этих сведений в реестре нет.",
     ),
     "unsupported": (
-        "Bu savolga berilgan ma’lumotlar asosida tasdiqlangan javob berib bo‘lmaydi.",
-        "На этот вопрос нельзя дать подтверждённый ответ по предоставленным данным.",
+        "Bu ma’lumotlardan savolga aniq javob topib bo‘lmaydi.",
+        "По этим данным нельзя дать точный ответ.",
     ),
     "ambiguous_entity": (
-        "Qaysi kompaniya, tovar yoki hududni nazarda tutdingiz? Nomini yoki kodini aniqlashtiring.",
-        "Уточните компанию, товар или регион: укажите название или код.",
+        "Qaysi kompaniya, tovar yoki hudud? Aniq nomi yoki kodini yozing.",
+        "О какой компании, товаре или регионе речь? Укажите название или код.",
     ),
     "ambiguous_metric": (
         "Qaysi ko‘rsatkich va davr kerakligini aniqlashtiring.",
         "Уточните необходимый показатель и период.",
     ),
     "mixed_units": (
-        "Bir-biriga mos bo‘lmagan o‘lchov birliklari bor. Kerakli birlikni aniqlashtiring.",
-        "Есть несовместимые единицы измерения. Уточните нужную единицу.",
+        "Bu birliklarni qo‘shib bo‘lmaydi. Qaysi birlik kerak?",
+        "Эти единицы нельзя складывать. Какая единица нужна?",
     ),
     "mixed_currencies": (
         "Valyutani aniqlashtiring: so‘mga aylantiraymi yoki valyutalar bo‘yicha alohida ko‘rsataymi?",
         "Уточните валюту: пересчитать в сумы или показать отдельно по валютам?",
     ),
-    "not_found": ("Aniq nom yoki kodni yuboring, iltimos.", "Пришлите точное название или код."),
+    "not_found": ("Aniq nom yoki kodni yozing.", "Укажите точное название или код."),
 }
 
 
@@ -211,7 +211,7 @@ def render_answer(answer: Answer) -> str:
     data = answer.evidence
     if data is None:
         return tr(TEXT["error"], lang)
-    lines = [tr(TEXT[answer.outcome], lang)]
+    lines = [tr(TEXT["no_match"], lang)] if answer.outcome == "no_match" else []
     for index, row in enumerate(data.rows[:10], 1):
         if len(data.rows) > 1:
             lines.append(f"\n{index}.")
@@ -221,20 +221,32 @@ def render_answer(answer: Answer) -> str:
             )
     lines.append("")
     if data.period_start:
-        lines.append(tr(("Davr", "Период"), lang) + f": {data.period_start} — {data.period_end}")
-    lines.append(
-        tr(("Mos yozuvlar", "Совпавших записей"), lang)
-        + f": {data.matched_count:,}".replace(",", " ")
-    )
-    if data.currencies:
+        if data.period_start == data.period_end:
+            lines.append(tr(("Sana", "Дата"), lang) + f": {data.period_start}")
+        else:
+            period = tr(
+                (
+                    f"{data.period_start} dan {data.period_end} gacha",
+                    f"с {data.period_start} по {data.period_end}",
+                ),
+                lang,
+            )
+            lines.append(tr(("Davr", "Период"), lang) + f": {period}")
+    if data.matched_count != 1:
         lines.append(
-            tr(("Manba valyutalari", "Валюты исходных данных"), lang)
+            tr(("Hisobga olingan yozuvlar", "Учтено записей"), lang)
+            + f": {data.matched_count:,}".replace(",", " ")
+        )
+    expressions = " ".join(data.expressions.values()).lower()
+    if data.currencies and re.search(r"\b(amount|starting_price|base_price)\b", expressions) and not re.search(r"\bcurrency\b", expressions):
+        lines.append(
+            tr(("Valyuta", "Валюта"), lang)
             + ": "
             + ", ".join(localize(value, lang) for value in data.currencies)
         )
-    if data.units:
+    if data.units and re.search(r"\b(volume|delivered_volume|starting_price|base_price|lot_size)\b", expressions) and not re.search(r"\bunit\b", expressions):
         lines.append(
-            tr(("Manba birliklari", "Единицы исходных данных"), lang)
+            tr(("Birlik", "Единица"), lang)
             + ": "
             + ", ".join(localize(value, lang) for value in data.units)
         )
@@ -242,39 +254,40 @@ def render_answer(answer: Answer) -> str:
         lines.append(
             tr(
                 (
-                    "Dastlabki 10 natija ko‘rsatilgan. CSV eksporti cheklangan natijani beradi (ko‘pi bilan 100 qator).",
-                    "Показаны первые 10 результатов. CSV содержит ограниченный результат запроса (не более 100 строк).",
+                    f"Ko‘rsatilgan: {min(len(data.rows), 10)} natija. CSVda: {len(data.rows)} qator.",
+                    f"Показано: {min(len(data.rows), 10)} результатов. В CSV: {len(data.rows)} строк.",
                 ),
                 lang,
             )
         )
     if data.calculation:
         lines.append(tr(("Hisob", "Расчёт"), lang) + ": " + render_calculation(data, lang))
-    lines.append(
-        tr(
-            (
-                "Manbalar tugmasida shartlar va dalillar bor.",
-                "Условия и подтверждения доступны по кнопке «Источники».",
-            ),
-            lang,
+    if data.truncated:
+        lines.append(
+            tr(
+                (
+                    "Natija dastlabki 100 qator bilan cheklangan.",
+                    "Результат ограничен первыми 100 строками.",
+                ),
+                lang,
+            )
         )
-    )
-    return "\n".join(lines)
+    return "\n".join(lines).strip()
 
 
 def render_sources(data: Evidence, language: str) -> str:
-    lines = [tr(("Manbalar va hisoblash", "Источники и расчёт"), language)]
+    lines = [tr(("Manbalar", "Источники"), language)]
     lines.append(
         tr(
             (
-                "Reyestr holati: 30.10.2026. Barcha ma’lumotlar o‘ylab topilgan.",
-                "Состояние реестра: 30.10.2026. Все данные вымышленные.",
+                "Bitimlar holati: 30.10.2026. Ma’lumotlar o‘ylab topilgan.",
+                "Состояние сделок: 30.10.2026. Данные вымышленные.",
             ),
             language,
         )
     )
     lines.append(tr(("Mos yozuvlar", "Совпавших записей"), language) + f": {data.matched_count}")
-    lines.append(tr(("Qo‘llangan so‘rov", "Выполненный запрос"), language) + ":\n" + data.sql)
+    lines.append(tr(("Hisoblash sharti", "Условия расчёта"), language) + ":\n" + data.sql)
     if data.calculation:
         lines.append(data.calculation)
     lines.append(tr(("Mos yozuvlardan misollar", "Примеры исходных записей"), language) + ":")
@@ -285,8 +298,8 @@ def render_sources(data: Evidence, language: str) -> str:
     lines.append(
         tr(
             (
-                "Misollar barcha mos yozuvlar ro‘yxati emas. Bo‘sh maydon nol degani emas.",
-                "Примеры не являются полным списком совпадений. Пустое поле не означает ноль.",
+                "Bu faqat misollar. Bo‘sh maydon nol degani emas.",
+                "Это примеры записей. Пустое поле не означает ноль.",
             ),
             language,
         )

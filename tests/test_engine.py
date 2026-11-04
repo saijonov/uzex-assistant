@@ -94,7 +94,7 @@ async def test_empty_lookup_does_not_support_no_match(sample_database):
 async def test_service_failure_is_not_reported_as_absence(sample_database):
     result = await Engine(Settings(_env_file=None), None, sample_database).answer("Savol")
     assert result.outcome == "error"
-    assert "ma’lumot yo‘qligini anglatmaydi" in render_answer(result)
+    assert "ma’lumot yo‘q degani emas" in render_answer(result)
 
 
 async def test_deadline_returns_service_error_without_unchecked_content(sample_database):
