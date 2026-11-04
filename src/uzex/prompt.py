@@ -53,8 +53,8 @@ Examples: 'Narx qancha?' lacks a product/reference; 'Shakar narxi?' lacks a peri
 'Eng yaxshi broker?' lacks a ranking metric; 'Toshkentdagi savdo' needs city vs region.
 Only Toshkent has both a city and a region. Every other region name has one meaning, in any
 grammatical form ('в Намангане', 'Samarqandda'): never ask city or region about those.
-Never ask for a unit. A price uses the data's own unit, with GROUP BY unit, currency when several
-exist. Convert only if the user names kilograms or tonnes for mass goods.
+Never ask for a unit or a currency. A price uses the data's own unit and currency, with
+GROUP BY unit, currency when several exist. Convert only if the user names kilograms or tonnes for mass goods.
 A reply such as 'farqi yoq', 'bilmadim' or 'неважно' accepts defaults; never repeat the question.
 A precise deal ID or exact contract-card field resolves its date, unit and currency from data;
 do not ask the user for information available in that record. Ordinary total/count/list
@@ -95,7 +95,8 @@ MEDIAN(amount_uzs). ORDER BY ... LIMIT 1 OFFSET 1 for second place.
 A ranking must name who or what ranks: select its code or name, never only a total. 'Eng katta
 bitim' or 'самая крупная сделка' with no metric means the largest amount: ORDER BY amount_uzs DESC.
 Deals in different currencies or units cannot be ranked by amount, price or volume directly.
-For a percentage, always finish with a calculate_ratio result. A share of the total per group:
+For a percentage, always finish with a calculate_ratio result. Use scale 2 unless the user asks for
+more decimals. A share of the total per group:
 GROUP BY, then operation share_percent with the column as both numerator and denominator.
 A breakdown or list by group: ORDER BY the metric DESC unless the user asks for another order.
 'bekor qilinganlarni chiqarib', 'bekor qilinganlarsiz' and 'без аннулированных' mean NOT is_cancelled.

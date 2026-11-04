@@ -408,3 +408,23 @@ def test_prompt_guides_the_mistakes_seen_in_live_runs(sample_database):
     assert "warehouse column region" in text
     assert "one FILTER column per year" in text
     assert "is not a missing reference" in text
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "100001-raqamli bitim uchun to‘langan QQSning haqiqiy summasi qancha?",
+        "QQSni qancha to'lagan?",
+        "Сумма НДС по сделке 100001",
+    ],
+)
+def test_paid_vat_is_recognised_with_grammatical_endings(question):
+    assert unavailable_request(price_review(task="count"), question) == "missing_field"
+
+
+def test_prompt_keeps_calculated_numbers_short(sample_database):
+    text = instructions(
+        sample_database.schema, sample_database.manifest, None, sample_database.values
+    )
+    assert "scale 2" in text
+    assert "Never ask for a unit or a currency" in text

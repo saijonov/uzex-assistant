@@ -32,8 +32,8 @@ WORD_BEFORE_NUMBER = re.compile(
 ABSENT_INFORMATION = re.compile(
     r"\b(?:foyda(?:si|ni|ga|sini)?|foyda qil\w*|daromad\w*|pribil\w*|doxod\w*|zarar\w*|ubit(?:ok|k\w*)|"
     r"telefon\w*|email|elektron pochta)\b|"
-    r"\b(?:qqs|nds)\b(?: \w+){0,3} (?:summa\w*|tolangan|tolagan|uplach\w*|uplat\w*|miqdor\w*|qancha)\b|"
-    r"\b(?:summa\w*|tolangan|tolagan|uplach\w*|uplat\w*|miqdor\w*)\b(?: \w+){0,3} (?:qqs|nds)\b"
+    r"\b(?:qqs|nds)\w*(?: \w+){0,3} (?:summa\w*|tolangan|tolagan|uplach\w*|uplat\w*|miqdor\w*|qancha)\b|"
+    r"\b(?:summa\w*|tolangan|tolagan|uplach\w*|uplat\w*|miqdor\w*)\b(?: \w+){0,3} (?:qqs|nds)\w*"
 )
 VAT_PAYER_WORDS = re.compile(r"tolovchi|platelshik")
 EXCLUDES_CANCELLED = re.compile(
@@ -197,6 +197,8 @@ def missing_requirements(
         missing = [field for field in missing if field != "region"]
     if YEAR.search(context):
         missing = [field for field in missing if field != "period"]
+    if review.task != "rank":
+        missing = [field for field in missing if field != "currency"]
     if review.task in {"rank", "list"}:
         missing = [field for field in missing if field not in {"entity", "reference", "product"}]
     if knows_product:

@@ -359,3 +359,20 @@ async def test_broad_product_is_answered_instead_of_asking_which_variant(sample_
         "2025-yilda sement narxi qancha?"
     )
     assert answer.outcome == "answer"
+
+
+@pytest.mark.parametrize("task", ["price", "turnover", "count", "volume"])
+def test_currency_is_not_asked_when_the_data_already_gives_it(task):
+    review_ = price_review(task=task, missing_fields=["currency"])
+    assert missing_requirements(review_, "2025 Shakar qancha?", [], None) == []
+
+
+def test_ranking_across_currencies_may_still_ask_which_one():
+    review_ = price_review(
+        task="rank",
+        subject="deal",
+        reference="not_needed",
+        entity_text=None,
+        missing_fields=["currency"],
+    )
+    assert missing_requirements(review_, "Birlik narxi eng qimmat bitim", [], None) == ["currency"]
