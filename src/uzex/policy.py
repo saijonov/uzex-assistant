@@ -47,10 +47,12 @@ ABSENT_INFORMATION = re.compile(
 VAT_PAYER_WORDS = re.compile(r"tolovchi|platelshik")
 EXCLUDES_CANCELLED = re.compile(
     r"bekor qilinmagan|bekor qilingan\w*siz\b|"
-    r"bekor qilingan\w*(?: \w+){0,2} (?:chiqar\w*|hisobga olma\w*|kiritma\w*|qoshma\w*|hisoblama\w*)|"
-    r"(?:\bbez(?: ucheta| uchyota)?|isklyuch\w*|\bkrome|ne schitaya|ne vklyuchaya|ne uchitivaya)"
+    r"bekor qilingan\w*(?: \w+){0,2} (?:chiqar\w*|hisobga olma\w*|kiritma\w*|qoshma\w*|hisoblama\w*|tashqari)|"
+    r"(?:\bbez(?: ucheta| uchyota)?|isklyuch\w*|\bkrome|ne schitaya|ne vklyuchaya|ne uchitivaya|"
+    r"za vichetom)"
     r"(?: \w+)? (?:annul\w*|otmen\w*)|(?:annul\w*|otmen\w*)(?: \w+)? (?:isklyuch\w*|ne vklyuch\w*)"
 )
+KEEPS_CANCELLED = re.compile(r"chiqar\w* tashlama\w*|chiqarma\w*|\bne isklyuch\w*|\bne vichit\w*")
 MENTIONS_CANCELLED = re.compile(
     r"\bbekor\b|\bannul\w*|\botmen\w*|\bcancel\w*|\bbarcha holat\w*|\bvse\w* sostoyan\w*"
 )
@@ -267,7 +269,7 @@ def cancellation_gap(review: RequestReview, question: str, data) -> str | None:
     if not data.cancelled_records:
         return None
     value = normalize(question)
-    if EXCLUDES_CANCELLED.search(value):
+    if EXCLUDES_CANCELLED.search(value) and not KEEPS_CANCELLED.search(value):
         return (
             f"The user asked to exclude cancelled deals, and this result counts "
             f"{data.cancelled_records} of them. Add NOT is_cancelled to WHERE."
