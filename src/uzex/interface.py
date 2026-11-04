@@ -1,3 +1,5 @@
+import re
+import unicodedata
 from html import escape
 
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
@@ -19,6 +21,14 @@ COPY = {
         "Задайте вопрос на русском или узбекском.\nНапример: Кто продавец по сделке 100001?",
     ),
     "menu": ("Menyu", "Меню"),
+    "greeting": (
+        "Salom! Birja bitimlari haqida savolingiz bo‘lsa, yozing.",
+        "Здравствуйте! Если есть вопрос о биржевых сделках, задавайте.",
+    ),
+    "greeting_assalom": (
+        "Va alaykum assalom! Birja bitimlari haqida savolingiz bo‘lsa, yozing.",
+        "Здравствуйте! Если есть вопрос о биржевых сделках, задавайте.",
+    ),
     "help": (
         "Yordam\nBitim raqami, tovar yoki kompaniya nomini yozing. Hisob uchun davr va birlikni ham ko‘rsating.\n\n"
         "Menyu tilini o‘zgartirsangiz ham, javob savolingiz tilida bo‘ladi. Boshqa tilda javob kerak bo‘lsa, savolda ayting.\n\n"
@@ -55,6 +65,57 @@ def text(key: str, language: str) -> str:
 
 def menu_action(value: str) -> str | None:
     return next((action for action, labels in MENU.items() if value in labels), None)
+
+
+def greeting(value: str) -> tuple[str, str] | None:
+    normalized = unicodedata.normalize("NFKC", value).casefold()
+    normalized = " ".join(re.sub(r"[^\w\s]", " ", normalized).split())
+    if normalized in {
+        "assalomu alaykum",
+        "assalomu aleykum",
+        "assalom alaykum",
+        "assalom aleykum",
+        "salom alaykum",
+        "salom aleykum",
+        "assalomalaykum",
+        "salomaleykum",
+        "ассалому алайкум",
+        "ассалому алейкум",
+        "ассалом алайкум",
+        "салом алайкум",
+    }:
+        return "greeting_assalom", "uz"
+    if normalized in {
+        "salom",
+        "assalom",
+        "salom yaxshimisiz",
+        "yaxshimisiz",
+        "xayrli tong",
+        "xayrli kun",
+        "xayrli kech",
+        "салом",
+        "ассалом",
+        "яхшимисиз",
+        "хайрли тонг",
+        "хайрли кун",
+        "хайрли кеч",
+    }:
+        return "greeting", "uz"
+    if normalized in {
+        "привет",
+        "приветствую",
+        "здравствуйте",
+        "здравствуй",
+        "здрасьте",
+        "добрый день",
+        "доброе утро",
+        "добрый вечер",
+        "привет как дела",
+        "здравствуйте как дела",
+        "салам",
+    }:
+        return "greeting", "ru"
+    return None
 
 
 def main_keyboard(language: str) -> ReplyKeyboardMarkup:

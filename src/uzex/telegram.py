@@ -25,7 +25,7 @@ from aiogram.types import (
 from uzex.config import Settings, require_credentials
 from uzex.downloads import requested_source_file, source_csv
 from uzex.engine import Engine, guess_language
-from uzex.interface import main_keyboard, menu_action, telegram_html
+from uzex.interface import greeting, main_keyboard, menu_action, telegram_html
 from uzex.interface import text as ui_text
 from uzex.models import Answer
 from uzex.render import export_csv, render_answer, render_sources, split_text, tr
@@ -274,6 +274,10 @@ class Service:
             return {"texts": [ui_text("help", language)], "menu_at": 0, "ui_language": language}
         if len(text) > 6000:
             return {"texts": [ui_text("shorten", language)]}
+        hello = greeting(text)
+        if hello:
+            key, reply_language = hello
+            return {"texts": [ui_text(key, reply_language)], "menu_at": 0, "ui_language": language}
         filename = requested_source_file(text)
         if filename:
             _, count, columns = await asyncio.to_thread(source_csv, self.engine.database, filename)
