@@ -146,6 +146,7 @@ ENFORCED_VALUE_COLUMNS = {
 }
 NAME_LOOKUP_KINDS = {"company", "broker"}
 NAME_MATCH_THRESHOLD = 80
+PRODUCT_MATCH_THRESHOLD = 78
 GENERIC_NAME_WORDS = {
     "mchj",
     "aj",
@@ -195,18 +196,21 @@ PRODUCT_ALIASES = {
     "sement": "Цемент",
     "benzin": "Бензин",
     "dizel": "Топливо дизельное",
-    "komir": "Уголь",
     "mis": "Медь",
-    "oltin": "Золото",
-    "kumush": "Серебро",
     "karbamid": "Карбамид",
     "selitra": "Селитра",
     "polietilen": "Полиэтилен",
     "guruch": "Рис",
-    "arpa": "Ячмень",
-    "makkajoxori": "Кукуруза",
     "kungaboqar yogi": "Масло подсолнечное",
     "yog": "Масло",
+    "gisht": "Кирпич",
+    "oyna": "Стекло",
+    "shisha": "Стекло",
+    "tuz": "Соль",
+    "quvur": "Труб",
+    "ohak": "Известь",
+    "kunjara": "Шрот",
+    "kungaboqar": "Подсолнечное",
 }
 
 
@@ -247,6 +251,25 @@ def product_aliases(needle: str) -> list[str]:
         for word, alias in PRODUCT_ALIASES.items()
         if word == needle or (len(word) >= 4 and any(token.startswith(word) for token in tokens))
     ]
+
+
+def product_score(needle: str, value: str) -> float:
+    words = value.split()
+    tokens = [
+        token
+        for token in needle.split()
+        if token not in PRODUCT_DESCRIPTION_WORDS and not token.isdigit()
+    ]
+    if not words or not tokens:
+        return 0
+    return max(
+        max(
+            fuzz.ratio(token, word),
+            fuzz.partial_ratio(token, word) if 6 <= len(token) <= len(word) else 0,
+        )
+        for token in tokens
+        for word in words
+    )
 
 
 def distinctive_name(value: str) -> str:
@@ -619,7 +642,9 @@ class Database:
             needles += [normalize(alias) for alias in product_aliases(needle)]
         named = kind in NAME_LOOKUP_KINDS
         distinct = distinctive_name(text) if named else ""
-        threshold = NAME_MATCH_THRESHOLD if named else 65
+        threshold = (
+            NAME_MATCH_THRESHOLD if named else PRODUCT_MATCH_THRESHOLD if kind == "product" else 65
+        )
         candidates = []
         for entry in self.catalog[kind]:
             values = [normalize(str(value)) for value in entry.values()]
@@ -628,6 +653,8 @@ class Database:
             if named:
                 fuzzy_ready = bool(distinct) and not distinct.isdigit()
                 score = fuzz.ratio(distinct, distinctive_name(entry["name"])) if fuzzy_ready else 0
+            elif kind == "product":
+                score = max(product_score(n, v) for n in needles for v in values)
             else:
                 score = max(fuzz.WRatio(n, v) for n in needles for v in values)
             if exact or partial or score >= threshold:
