@@ -354,7 +354,12 @@ class Engine:
                             "candidates": rows,
                             "may_be_truncated": len(rows) == 30,
                         }
-                        if not rows and lookup.kind in {"company", "broker", "product"}:
+                        if not rows and self.database.names_product(lookup.text):
+                            output["note"] = (
+                                "This spelling found nothing, but it looks like a real product. "
+                                "Look it up again with the base word or the Russian name."
+                            )
+                        elif not rows and lookup.kind in {"company", "broker", "product"}:
                             output["note"] = (
                                 "No record has this name. Stop searching and finish with outcome "
                                 "unavailable, reason not_found."

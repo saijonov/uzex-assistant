@@ -236,6 +236,15 @@ CITY_PREFIX = re.compile(r"\bg (?:toshkent|tashkent)")
 OBLAST_WORD = re.compile(r"\bviloyat\w*|\boblast\w*")
 
 
+def product_aliases(needle: str) -> list[str]:
+    tokens = needle.split()
+    return [
+        alias
+        for word, alias in PRODUCT_ALIASES.items()
+        if word == needle or (len(word) >= 4 and any(token.startswith(word) for token in tokens))
+    ]
+
+
 def distinctive_name(value: str) -> str:
     return " ".join(word for word in normalize(value).split() if word not in GENERIC_NAME_WORDS)
 
@@ -564,8 +573,9 @@ class Database:
             if rows:
                 match = "exact" if len(rows) == 1 else "partial"
                 return [{**entry, "match": match, "score": 100.0} for entry in rows]
-        alias = PRODUCT_ALIASES.get(needle) if kind == "product" else None
-        needles = [needle] + ([normalize(alias)] if alias else [])
+        needles = [needle]
+        if kind == "product":
+            needles += [normalize(alias) for alias in product_aliases(needle)]
         named = kind in NAME_LOOKUP_KINDS
         distinct = distinctive_name(text) if named else ""
         threshold = NAME_MATCH_THRESHOLD if named else 65

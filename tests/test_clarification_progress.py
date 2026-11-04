@@ -376,3 +376,47 @@ def test_ranking_across_currencies_may_still_ask_which_one():
         missing_fields=["currency"],
     )
     assert missing_requirements(review_, "Birlik narxi eng qimmat bitim", [], None) == ["currency"]
+
+
+@pytest.mark.parametrize(
+    "text,expected",
+    [
+        ("shakarning", "сахар"),
+        ("shakarni", "сахар"),
+        ("sementning", "цемент"),
+        ("paxtaning", "хлопок"),
+        ("сахара", "сахар"),
+        ("цемента", "цемент"),
+    ],
+)
+def test_product_lookup_understands_grammatical_endings(sample_database, text, expected):
+    if not any(expected in row["name"].lower() for row in sample_database.catalog["product"]):
+        pytest.skip("product is not in the small fixture")
+    rows = sample_database.lookup("product", text)
+    assert rows
+    assert expected in rows[0]["name"].lower()
+
+
+def test_short_product_words_need_an_exact_match(sample_database):
+    assert sample_database.lookup("product", "unning") == []
+
+
+async def test_lookup_miss_on_a_known_product_word_does_not_claim_absence(
+    sample_database, monkeypatch
+):
+    monkeypatch.setattr(sample_database, "lookup", lambda kind, text: [])
+    client = ScriptedClient(
+        [
+            review(language="uz", task="count", subject="product"),
+            ("lookup_entities", {"kind": "product", "text": "shakarning"}),
+            ("query_registry", {"sql": "SELECT COUNT(*) AS n FROM registry"}),
+            finish(),
+        ]
+    )
+    await Engine(Settings(_env_file=None), client, sample_database).answer("shakarning bitimlari")
+    outputs = [
+        item["output"]
+        for item in client.requests[-1]["input"]
+        if isinstance(item, dict) and item.get("type") == "function_call_output"
+    ]
+    assert not any("not_found" in output for output in outputs)
