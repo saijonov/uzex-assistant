@@ -4,7 +4,7 @@ A Telegram assistant from team 21 for the UZEX qualifying challenge. It answers 
 
 Bot: https://t.me/uzex21_bot
 
-Start with `/start` to choose a menu language, or ask a question immediately. The bottom menu has examples, help, language selection and a new conversation. Answers follow the question language, including an explicit request for Uzbek or Russian. Sources shows the evidence; CSV downloads the columns returned for that answer.
+Start with `/start` to choose a menu language, or ask a question immediately. The bottom menu has examples, help, language selection and a new conversation. Answers follow the question language, including an explicit request for Uzbek or Russian. Sources shows the evidence. Lists have Previous/Next buttons and attach a CSV with the full stored result. Ask for `brokers.csv` to receive all 120 brokers with the original source columns.
 
 ## Local setup
 

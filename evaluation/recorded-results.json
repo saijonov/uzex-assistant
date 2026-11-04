@@ -106,5 +106,47 @@
     ],
     "query_replay_count": 118,
     "query_result_changes": 0
+  },
+  "list_download_review": {
+    "offline_tests": 104,
+    "conversation": [
+      {
+        "question": "barcha sotuvchilar haqida malumot ber",
+        "rows": 392,
+        "passed": true,
+        "seconds": 5.623
+      },
+      {
+        "question": "hamma 100 tasi kerak",
+        "rows": 100,
+        "passed": true,
+        "seconds": 6.201
+      },
+      {
+        "question": "100 ta broker haqida hamma malumotni ber",
+        "rows": 100,
+        "passed": true,
+        "seconds": 6.907
+      },
+      {
+        "question": "menga brokers csv fileni jo'nat",
+        "file": "brokers.csv",
+        "rows": 120,
+        "columns": 4,
+        "passed": true
+      }
+    ],
+    "source_content_checks": {
+      "brokers.csv": {
+        "rows": 120,
+        "columns": 4,
+        "matches_original_records": true
+      },
+      "participants.csv": {
+        "rows": 14392,
+        "columns": 6,
+        "matches_original_records": true
+      }
+    }
   }
 }

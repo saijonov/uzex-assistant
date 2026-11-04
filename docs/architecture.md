@@ -16,7 +16,7 @@ The Responses API receives the schema, dataset coverage, business definitions an
 
 Names are resolved against actual source strings. Unicode normalization, Cyrillic transliteration and a small Uzbek product vocabulary help lookup; fuzzy suggestions are never proof of identity. Different grades and classes remain distinct. The model must clarify ambiguous identities.
 
-SQL is parsed as an AST. One SELECT from one approved relation is allowed. Writes, external sources, schema-qualified tables, extensions, joins, subqueries, CTEs, HAVING, window functions, invented output constants and unapproved functions are rejected. Scope filters belong in WHERE so provenance covers the same records as the answer. A read-only DuckDB connection also disables external access and extension loading. Queries have an interruption timer, row cap and memory limit. Mixed currency or measurement-unit aggregates are rejected unless grouped or explicitly normalized.
+SQL is parsed as an AST. One SELECT from one approved relation is allowed. Writes, external sources, schema-qualified tables, extensions, joins, subqueries, CTEs, HAVING, window functions, invented output constants and unapproved functions are rejected. Scope filters belong in WHERE so provenance covers the same records as the answer. A read-only DuckDB connection also disables external access and extension loading. Queries have an interruption timer, per-table row cap and memory limit. Registry output is capped at 100; directory limits allow complete current directories. Tool responses expose only 20 preview rows to the model, while application evidence retains the full bounded result for pagination and CSV. Mixed currency or measurement-unit aggregates are rejected unless grouped or explicitly normalized.
 
 Financial division uses Python Decimal with 50-digit calculation precision and explicit ROUND_HALF_UP display rounding. Model-provided numeric operands are not accepted: numerator and denominator must name columns in an executed result. Ratios, percentages and percentage changes are supported. SQL division and AVG are blocked.
 
@@ -28,7 +28,7 @@ The engine allows eight tool rounds, bounded API calls, query timeouts, four sim
 
 ## Telegram and durability
 
-One long-polling process receives private messages and callbacks. Each update is committed to SQLite before its offset advances. Update IDs are unique. Jobs in a chat execute in order; other chats can run concurrently. Results are persisted before sending and multipart progress is tracked. Restarts recover unfinished jobs. Source and CSV callbacks verify the requesting chat owns the answer.
+One long-polling process receives private messages and callbacks. Each update is committed to SQLite before its offset advances. Update IDs are unique. Jobs in a chat execute in order; other chats can run concurrently. Results are persisted before sending and multipart progress is tracked. Restarts recover unfinished jobs. Source, CSV and pagination callbacks verify the requesting chat owns the answer. Large lists attach their stored CSV automatically. Named brokers.csv and participants.csv downloads use fixed source-field mappings, never user-supplied file paths or SQL.
 
 Telegram has no general idempotency key for sendMessage. A crash after Telegram accepts a message but before the local sent marker is saved can cause a repeated reply. Incoming updates and normal retries are deduplicated; absolute exactly-once external delivery is not claimed.
 
