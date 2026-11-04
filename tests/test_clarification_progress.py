@@ -420,3 +420,8 @@ async def test_lookup_miss_on_a_known_product_word_does_not_claim_absence(
         if isinstance(item, dict) and item.get("type") == "function_call_output"
     ]
     assert not any("not_found" in output for output in outputs)
+
+
+@pytest.mark.parametrize("text", ["цена хлопка", "по хлопку", "хлопком"])
+def test_russian_forms_of_cotton_count_as_a_named_product(sample_database, text):
+    assert sample_database.names_product(text)

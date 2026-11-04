@@ -187,6 +187,7 @@ PRODUCT_ALIASES = {
     "bugdoy": "Пшеница",
     "un": "Мука",
     "paxta": "Хлопок",
+    "xlopk": "Хлопок",
     "paxta yogi": "Масло хлопковое",
     "sement": "Цемент",
     "benzin": "Бензин",
