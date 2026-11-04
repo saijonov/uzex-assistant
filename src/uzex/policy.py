@@ -44,7 +44,7 @@ ABSENT_INFORMATION = re.compile(
     r"\b(?:qqs|nds)\w*(?: \w+){0,3} (?:summa\w*|tolangan|tolagan|uplach\w*|uplat\w*|miqdor\w*|qancha)\b|"
     r"\b(?:summa\w*|tolangan|tolagan|uplach\w*|uplat\w*|miqdor\w*)\b(?: \w+){0,3} (?:qqs|nds)\w*"
 )
-VAT_PAYER_WORDS = re.compile(r"tolovchi|platelshik")
+VAT_PAYER_WORDS = re.compile(r"tolovchi|platelshik|tolamay\w*|tolamagan\w*|tolaydi\w*")
 EXCLUDES_CANCELLED = re.compile(
     r"bekor qilinmagan|bekor qilingan\w*siz\b|"
     r"bekor qilingan\w*(?: \w+){0,2} (?:chiqar\w*|hisobga olma\w*|kiritma\w*|qoshma\w*|hisoblama\w*|tashqari)|"
