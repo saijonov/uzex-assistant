@@ -354,3 +354,34 @@ def test_grouped_result_is_not_described_with_a_deal_total(sample_database):
 
 def test_plain_list_is_not_marked_as_grouped(sample_database):
     assert not sample_database.query("SELECT deal_id FROM registry LIMIT 2", "q1").grouped
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "Eng ko'p foyda qilgan kompaniya qaysi?",
+        "Eng ko'p daromad qiladigan 10 ta broker kim?",
+        "Какая прибыль у компании?",
+        "Самый большой доход брокера",
+        "Какова фактически уплаченная сумма НДС по сделке 100001?",
+        "100001-bitim bo'yicha to'langan QQS miqdori qancha?",
+        "Kompaniyaning telefon raqami qanday?",
+    ],
+)
+def test_information_the_registry_lacks_is_refused_at_once(question):
+    assert unavailable_request(price_review(task="count"), question) == "missing_field"
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "QQS to'lovchilari soni qancha?",
+        "QQS to'lovchi sotuvchilar nechta?",
+        "Сколько плательщиков НДС среди продавцов?",
+        "921912462 kompaniyasi QQS to'lovchisimi?",
+        "Foydalanish muddati qancha?",
+        "Eng ko'p bitim qilgan kompaniya qaysi?",
+    ],
+)
+def test_answerable_questions_near_those_words_are_not_refused(question):
+    assert unavailable_request(price_review(task="count"), question) is None

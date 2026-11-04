@@ -29,6 +29,13 @@ NUMBER_BEFORE_WORD = re.compile(rf"\b(?P<number>\d+){NUMBER_FILLER} {RECORD_WORD
 WORD_BEFORE_NUMBER = re.compile(
     rf"\b{RECORD_WORDS}{NUMBER_FILLER} (?P<number>\d+)\b{NOT_AN_IDENTIFIER}"
 )
+ABSENT_INFORMATION = re.compile(
+    r"\b(?:foyda(?:si|ni|ga|sini)?|foyda qil\w*|daromad\w*|pribil\w*|doxod\w*|zarar\w*|ubit(?:ok|k\w*)|"
+    r"telefon\w*|email|elektron pochta)\b|"
+    r"\b(?:qqs|nds)\b(?: \w+){0,3} (?:summa\w*|tolangan|tolagan|uplach\w*|uplat\w*|miqdor\w*|qancha)\b|"
+    r"\b(?:summa\w*|tolangan|tolagan|uplach\w*|uplat\w*|miqdor\w*)\b(?: \w+){0,3} (?:qqs|nds)\b"
+)
+VAT_PAYER_WORDS = re.compile(r"tolovchi|platelshik")
 EXCLUDES_CANCELLED = re.compile(
     r"bekor qilinmagan|bekor qilingan\w*siz\b|"
     r"bekor qilingan\w*(?: \w+){0,2} (?:chiqar\w*|hisobga olma\w*|kiritma\w*|qoshma\w*|hisoblama\w*)|"
@@ -319,6 +326,8 @@ def settle_candidates(
 
 def unavailable_request(review: RequestReview, question: str) -> str | None:
     value = normalize(question)
+    if ABSENT_INFORMATION.search(value) and not VAT_PAYER_WORDS.search(value):
+        return "missing_field"
     price_request = (review.task == "price" and review.subject not in {"deal", "contract"}) or (
         review.task == "unsupported" and review.subject in {"product", "market"}
     )
