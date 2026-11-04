@@ -147,6 +147,7 @@ ENFORCED_VALUE_COLUMNS = {
 NAME_LOOKUP_KINDS = {"company", "broker"}
 NAME_MATCH_THRESHOLD = 80
 PRODUCT_MATCH_THRESHOLD = 78
+REGION_MATCH_THRESHOLD = 85
 GENERIC_NAME_WORDS = {
     "mchj",
     "aj",
@@ -677,13 +678,14 @@ class Database:
             needles += [normalize(alias) for alias in product_aliases(needle)]
         named = kind in NAME_LOOKUP_KINDS
         distinct = distinctive_name(text) if named else ""
-        threshold = (
-            NAME_MATCH_THRESHOLD if named else PRODUCT_MATCH_THRESHOLD if kind == "product" else 65
-        )
+        thresholds = {"product": PRODUCT_MATCH_THRESHOLD, "region": REGION_MATCH_THRESHOLD}
+        threshold = NAME_MATCH_THRESHOLD if named else thresholds.get(kind, 65)
         candidates = []
         for entry in self.catalog[kind]:
             values = [normalize(str(value)) for value in entry.values()]
-            exact = any(n in values for n in needles)
+            exact = any(n in values for n in needles) or (
+                named and bool(distinct) and distinctive_name(entry["name"]) == distinct
+            )
             partial = any(n and n in v for n in needles for v in values)
             if named:
                 fuzzy_ready = bool(distinct) and not distinct.isdigit()
@@ -703,6 +705,9 @@ class Database:
         candidates.sort(
             key=lambda r: (r["match"] == "exact", r["match"] == "partial", r["score"]), reverse=True
         )
+        exact_names = [row for row in candidates if named and row["match"] == "exact"]
+        if len(exact_names) == 1:
+            return exact_names
         return candidates[:30]
 
     def sample(self, sql: str, count: int, query_id: str, timeout: float = 8) -> Evidence:

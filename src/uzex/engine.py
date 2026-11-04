@@ -371,6 +371,12 @@ class Engine:
                                 "This spelling found nothing, but it looks like a real product. "
                                 "Look it up again with the base word or the Russian name."
                             )
+                        elif not rows and lookup.kind == "region":
+                            output["note"] = (
+                                "No region has this name. A city or district is not a region: "
+                                "filter LOWER(warehouse_address) LIKE with its Latin spelling, for "
+                                "example '%qarshi%' for Карши. Do not ask the user."
+                            )
                         elif not rows and lookup.kind in {"company", "broker", "product"}:
                             output["note"] = (
                                 "No record has this name. Stop searching and finish with outcome "
