@@ -5,6 +5,7 @@ from test_engine import ScriptedClient, finish, review
 
 from uzex.config import Settings
 from uzex.engine import Engine
+from uzex.evaluate import grade
 from uzex.models import Answer
 from uzex.policy import cancellation_gap
 from uzex.render import memory_text, render_answer
@@ -115,3 +116,18 @@ def test_a_plain_sum_still_breaks_the_turnover_default(sample_database):
     review_model = detail_review(task="turnover", subject="market")
     data = sample_database.query("SELECT SUM(amount_uzs) AS total FROM registry", "q1")
     assert "by default" in cancellation_gap(review_model, "2025 summa", data)
+
+
+def test_grading_looks_at_every_part(sample_database):
+    answer = Answer(
+        outcome="answer",
+        language="uz",
+        evidence=sample_database.query("SELECT COUNT(*) AS n FROM registry", "q1"),
+        extra_evidence=[sample_database.query("SELECT COUNT(*) AS m FROM contracts", "q2")],
+    )
+    case = {
+        "outcomes": ["answer"],
+        "language": "uz",
+        "expected_values": [str(answer.extra_evidence[0].rows[0]["m"])],
+    }
+    assert grade(case, answer)

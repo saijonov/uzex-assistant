@@ -29,9 +29,8 @@ def grade(case: dict, answer) -> bool:
         return False
     if answer.language != case["language"]:
         return False
-    actual = [
-        value for row in (answer.evidence.rows if answer.evidence else []) for value in row.values()
-    ]
+    parts = [answer.evidence, *answer.extra_evidence] if answer.evidence else []
+    actual = [value for part in parts for row in part.rows for value in row.values()]
     return all(
         any(equivalent(expected, value) for value in actual) for expected in case["expected_values"]
     )
