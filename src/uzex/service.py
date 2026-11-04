@@ -2,6 +2,7 @@ import os
 import plistlib
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 
@@ -29,5 +30,11 @@ def install_service(project: Path) -> Path:
     target.chmod(0o600)
     domain = f"gui/{os.getuid()}"
     subprocess.run(["launchctl", "bootout", f"{domain}/{label}"], capture_output=True, check=False)
-    subprocess.run(["launchctl", "bootstrap", domain, str(target)], check=True)
-    return target
+    for _ in range(12):
+        loaded = subprocess.run(
+            ["launchctl", "bootstrap", domain, str(target)], capture_output=True, check=False
+        )
+        if loaded.returncode == 0:
+            return target
+        time.sleep(0.25)
+    raise RuntimeError("Could not load the local service; check launchctl and var/bot.log")
