@@ -118,6 +118,55 @@ def normalize(value: str) -> str:
     return re.sub(r"[^a-z0-9]+", " ", value).strip()
 
 
+REGION_STEMS = {
+    "Andijon viloyati": ("andijon", "andijan"),
+    "Buxoro viloyati": ("buxoro", "buxar", "buhar", "bukhar"),
+    "Farg‘ona viloyati": ("fargona", "fergan"),
+    "Jizzax viloyati": ("jizzax", "jizax", "jizak", "djizak", "dzhizak"),
+    "Namangan viloyati": ("namangan",),
+    "Navoiy viloyati": ("navoiy", "navoi", "navoy"),
+    "Qashqadaryo viloyati": ("qashqadar", "kashkadar"),
+    "Qoraqalpog‘iston Respublikasi": ("qoraqalpog", "karakalpak", "qaraqalpaq"),
+    "Samarqand viloyati": ("samarqand", "samarkand"),
+    "Sirdaryo viloyati": ("sirdar",),
+    "Surxondaryo viloyati": ("surxon", "surxan", "surhan"),
+    "Toshkent shahri": ("toshkent", "tashkent"),
+    "Toshkent viloyati": ("toshkent", "tashkent"),
+    "Xorazm viloyati": ("xorazm", "xorezm", "horazm", "horezm"),
+}
+TOSHKENT_REGIONS = ("Toshkent shahri", "Toshkent viloyati")
+CITY_WORD = re.compile(
+    r"\bsha[hx]ar\w*|\bsha[hx]ri?\b|\bshahri(?:da|dagi|ga|ni|ning|dan)\b|\bgorod\w*|\bcity\b"
+)
+CITY_PREFIX = re.compile(r"\bg (?:toshkent|tashkent)")
+OBLAST_WORD = re.compile(r"\bviloyat\w*|\boblast\w*")
+
+
+def named_regions(text: str) -> list[str]:
+    value = normalize(text)
+    tokens = value.split()
+    names = [
+        name
+        for name, stems in REGION_STEMS.items()
+        if any(token.startswith(stems) for token in tokens)
+    ]
+    if all(name in names for name in TOSHKENT_REGIONS):
+        city = bool(CITY_WORD.search(value) or CITY_PREFIX.search(value))
+        oblast = bool(OBLAST_WORD.search(value))
+        if city != oblast:
+            names.remove(TOSHKENT_REGIONS[1] if city else TOSHKENT_REGIONS[0])
+    return names
+
+
+def region_choice(text: str) -> str | None:
+    value = normalize(text)
+    city = bool(CITY_WORD.search(value) or CITY_PREFIX.search(value))
+    oblast = bool(OBLAST_WORD.search(value))
+    if city == oblast:
+        return None
+    return TOSHKENT_REGIONS[0] if city else TOSHKENT_REGIONS[1]
+
+
 def serial(value):
     if isinstance(value, Decimal):
         return str(value)
@@ -239,6 +288,12 @@ class Database:
 
     def lookup(self, kind: str, text: str) -> list[dict]:
         needle = normalize(text)
+        if kind == "region":
+            names = named_regions(text)
+            rows = [entry for entry in self.catalog[kind] if entry["name"] in names]
+            if rows:
+                match = "exact" if len(rows) == 1 else "partial"
+                return [{**entry, "match": match, "score": 100.0} for entry in rows]
         alias = PRODUCT_ALIASES.get(needle) if kind == "product" else None
         needles = [needle] + ([normalize(alias)] if alias else [])
         candidates = []

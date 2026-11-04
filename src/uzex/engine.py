@@ -19,7 +19,13 @@ from uzex.models import (
     RequestReview,
     SampleQuery,
 )
-from uzex.policy import missing_requirements, unavailable_request
+from uzex.policy import (
+    missing_requirements,
+    no_preference,
+    repeats_question,
+    settle_candidates,
+    unavailable_request,
+)
 from uzex.prompt import instructions
 
 logger = logging.getLogger(__name__)
@@ -181,6 +187,12 @@ class Engine:
                                 continues_pending=review.continuation,
                             )
                         missing = missing_requirements(review, question, history, pending)
+                        if repeats_question(missing, pending, review.continuation):
+                            return Answer(
+                                outcome="unavailable",
+                                language=language or review.language,
+                                reason="needs_detail",
+                            )
                         if missing:
                             return Answer(
                                 outcome="clarify",
@@ -194,6 +206,12 @@ class Engine:
                             "task": review.task,
                             "instruction": "Use data tools; ask_clarification if lookup or query reveals ambiguity.",
                         }
+                        if pending and (no_preference(question) or review.missing_fields):
+                            output["defaults"] = (
+                                "Do not ask again. Where the user gave no value, use all available "
+                                "dates, the data's own units and currencies, rank by deal count "
+                                "and include both roles or regions."
+                            )
                     elif review is None:
                         raise ValueError("review_request must run before other tools")
                     elif call.name == "ask_clarification":
@@ -203,6 +221,17 @@ class Engine:
                             and clarification.candidates_query_id not in lookups
                         ):
                             raise ValueError("Clarification choices need a real lookup ID")
+                        offers_new_choices = clarification.candidates_query_id is not None and not (
+                            pending or {}
+                        ).get("candidates")
+                        if not offers_new_choices and repeats_question(
+                            clarification.fields, pending, review.continuation
+                        ):
+                            return Answer(
+                                outcome="unavailable",
+                                language=language or clarification.language,
+                                reason="needs_detail",
+                            )
                         return Answer(
                             outcome="clarify",
                             language=language or clarification.language,
@@ -221,14 +250,25 @@ class Engine:
                                 raise ValueError(
                                     "Do not resolve an ambiguous identity by selecting a candidate yourself; ask the user"
                                 )
-                        rows = self.database.lookup(lookup.kind, lookup.text)
+                        rows = settle_candidates(
+                            self.database.lookup(lookup.kind, lookup.text),
+                            lookup.kind,
+                            question,
+                            pending,
+                        )
                         query_id = f"lookup_{len(lookups) + 1}"
                         lookups[query_id] = rows
                         if lookup.kind in {"company", "broker", "region"}:
                             exact = [row for row in rows if row["match"] == "exact"]
                             partial = [row for row in rows if row["match"] == "partial"]
-                            needs_one = review.task != "list" and not (
-                                review.task == "count" and review.reference == "not_needed"
+                            needs_one = (
+                                review.task != "list"
+                                and not (pending and no_preference(question))
+                                and not (
+                                    review.task == "count"
+                                    and review.reference == "not_needed"
+                                    and lookup.kind != "region"
+                                )
                             )
                             if (
                                 rows

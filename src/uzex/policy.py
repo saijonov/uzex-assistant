@@ -1,7 +1,16 @@
 import re
 
-from uzex.database import normalize
+from uzex.database import TOSHKENT_REGIONS, named_regions, normalize, region_choice
 from uzex.models import RequestReview
+
+OPTIONAL_FIELDS = {"period", "unit", "currency", "ranking", "role", "region"}
+UNIT_WORDS = re.compile(
+    r"\b(?:kg|kilo\w*|tonn\w*|litr\w*|dona\w*|sht|shtuk\w*|metr\w*|kubometr\w*|kub|kvadrat\w*|lot\w*)\b"
+)
+NO_PREFERENCE = re.compile(
+    r"\b(?:farqi? (?:yoq|yuq)|farq qilmaydi|bilmadim|bilmayman|istalgan\w*|ahamiyati yoq|"
+    r"nevajno|vse ravno|bez raznitsi|ne znayu|lyub\w*|any|dont know|doesnt matter)\b"
+)
 
 CLARIFICATION_TEXT = {
     "entity": (
@@ -85,20 +94,63 @@ def missing_requirements(
         and review.period in {"all_available", "not_needed"}
     ):
         missing.append("period")
-    if review.task == "price" and review.subject not in {"deal", "contract"}:
-        context = normalize(question + " " + (pending or {}).get("question", ""))
-        if not re.search(
-            r"\b(kg|kilogramm|kilogram|tonna|tonne|tonn|tonnu|tonnah|litr|dona|shtuka|shtuku|sht|metr|lot)\b",
-            context,
-        ):
-            missing.append("unit")
-    if review.task == "rank" and review.ranking_by in {"missing", "not_needed"}:
+    if review.task == "rank" and review.subject == "deal":
+        missing = [field for field in missing if field != "ranking"]
+    elif review.task == "rank" and review.ranking_by in {"missing", "not_needed"}:
         missing.append("ranking")
+    context = " ".join([question, (pending or {}).get("question", "")])
+    if UNIT_WORDS.search(normalize(context)):
+        missing = [field for field in missing if field != "unit"]
+    if region_is_settled(context):
+        missing = [field for field in missing if field != "region"]
+    if pending:
+        asked = set(pending.get("missing_fields") or []) if review.continuation else set()
+        indifferent = no_preference(question)
+        missing = [
+            field
+            for field in missing
+            if field not in OPTIONAL_FIELDS or not (indifferent or field in asked)
+        ]
     missing = list(dict.fromkeys(missing))
     for identity in ("product", "entity", "reference"):
         if identity in missing:
             return [identity]
     return missing[:2]
+
+
+def no_preference(question: str) -> bool:
+    return bool(NO_PREFERENCE.search(normalize(question)))
+
+
+def region_is_settled(text: str) -> bool:
+    names = named_regions(text)
+    return bool(names) and not all(name in names for name in TOSHKENT_REGIONS)
+
+
+def repeats_question(fields: list[str], pending: dict | None, continuation: bool) -> bool:
+    return bool(
+        pending
+        and continuation
+        and fields
+        and set(fields) <= set(pending.get("missing_fields") or [])
+    )
+
+
+def settle_candidates(
+    rows: list[dict], kind: str, question: str, pending: dict | None
+) -> list[dict]:
+    selected = (pending or {}).get("selected_candidate") or {}
+    for key in ("inn", "broker_code", "name"):
+        chosen = [row for row in rows if selected.get(key) and row.get(key) == selected[key]]
+        if chosen:
+            return [{**chosen[0], "match": "exact"}]
+    if kind == "region" and len(rows) > 1:
+        context = " ".join([question, (pending or {}).get("question", "")])
+        choice = region_choice(context)
+        chosen = [row for row in rows if row.get("name") == choice]
+        if chosen:
+            return [{**chosen[0], "match": "exact"}]
+    return rows
 
 
 def unavailable_request(review: RequestReview, question: str) -> str | None:

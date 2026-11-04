@@ -122,7 +122,14 @@ TEXT = {
         "Valyutani aniqlashtiring: so‘mga aylantiraymi yoki valyutalar bo‘yicha alohida ko‘rsataymi?",
         "Уточните валюту: пересчитать в сумы или показать отдельно по валютам?",
     ),
-    "not_found": ("Aniq nom yoki kodni yozing.", "Укажите точное название или код."),
+    "not_found": (
+        "Bu nom reyestrda topilmadi. Aniq nom yoki kodni yozing.",
+        "Такого названия в реестре нет. Укажите точное название или код.",
+    ),
+    "needs_detail": (
+        "Bu tafsilotsiz aniq javob bera olmayman. Savolni raqam, nom yoki davr bilan to‘liq yozing.",
+        "Без этой детали точно ответить не могу. Напишите вопрос целиком: с номером, названием или периодом.",
+    ),
 }
 
 
