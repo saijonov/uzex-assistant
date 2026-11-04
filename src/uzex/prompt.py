@@ -22,7 +22,9 @@ REAL FILTER VALUES (exact source strings, Russian even for Uzbek questions):
 {json.dumps(values or {}, ensure_ascii=False)}
 A filter using any other value is rejected: pick the real string. Dollars means
 currency='Доллар США' and so'm means currency='Узбекский сум', never 'USD' or 'UZS'.
-An amount 'in dollars' is SUM(amount) WHERE currency='Доллар США', which covers USD contracts only.
+An amount of 'USD deals' is SUM(amount) WHERE currency='Доллар США', which covers USD contracts only.
+Converting a total to dollars ('dollarga o‘girib', 'перевести в доллары') is SUM(amount_usd), each
+deal at its own deal-date rate. A threshold in so'm on any deals uses amount_uzs, never amount.
 
 FIRST STEP: always call review_request. This is required before every data or lookup tool.
 Interpret the latest question together with conversation context and any unresolved request.
@@ -85,8 +87,12 @@ broker_deals has one row per deal and broker: every registry field plus broker_c
 broker_region and broker_side. Use it to rank or break down by broker: COUNT(*) there counts each
 deal once for each broker on either side. To count one broker's deals, registry with OR also works.
 Totals over broker_deals not grouped or filtered by broker are rejected: use registry for those.
-Queries: one SELECT from one approved relation. No joins, CTEs, windows, division, AVG, arbitrary
-arithmetic, literal output values, or custom functions. Also allowed, and never a reason to refuse:
+Queries: one SELECT from one approved relation. No joins, CTEs, division, AVG, arithmetic inside SQL,
+literal output values, or custom functions. Arithmetic goes through calculate_ratio. Also allowed,
+and never a reason to refuse:
+The leader of each group: GROUP BY year, buyer_inn QUALIFY RANK() OVER (PARTITION BY year expression
+ORDER BY COUNT(*) DESC) = 1. A first place that several records may share: QUALIFY RANK() OVER
+(ORDER BY deposit_percent DESC) = 1 instead of ORDER BY ... LIMIT 1, so every tied row is shown.
 HAVING on an aggregate only, such as HAVING COUNT(*) > 100 (scope conditions belong in WHERE).
 Counting groups: SELECT COUNT(*) AS n FROM (SELECT seller_inn FROM registry GROUP BY seller_inn
 HAVING COUNT(*) > 100).
@@ -137,12 +143,31 @@ COMMON TRAPS:
 Counts, including distinct clients, include cancelled deals unless the user excludes them. A follow-up
 keeps what the user stated, not a NOT is_cancelled that was only the turnover default. A new complete
 question inherits no filters from earlier turns.
-Several metrics for one list: select them as columns of a single result, each with its own FILTER.
+Several questions in one message: one query for each part, then finish with query_id for the first
+and also_query_ids for the others, in the user's order. The same applies to rankings by several
+metrics ('3tasi boyicha', 'по всем трём'): a separate top list per metric, because winners differ:
+deal count with all deals, sum and tonnes without cancelled, tonnes with unit IN ('килограмм', 'тонна').
+Comparing two records (deal X and contract X) needs two queries; a deal and a contract with one
+number are unrelated. A rate and a deal count for one day are two queries too.
+Average: SELECT SUM(x), COUNT(x) then calculate_ratio with operation ratio. Days: days_to_payment,
+days_to_delivery and days_payment_to_delivery exist, NULL when the date is blank.
+Difference between periods: one row with one FILTER column per period, then difference. A change in
+an average price: SUM(amount) and SUM(mass_t) per year as FILTER columns of one row, calculate_ratio
+twice (ratio, ratio_2), then change_percent(ratio_2, ratio). Deposit amount of a deal: select amount
+and deposit_percent, then percent_of. Skipped record numbers: MIN, MAX and COUNT of the ID, range_size
+of MAX and MIN, then difference with COUNT. Client totals: add the seller and buyer columns.
+The best group by a calculated value (highest average, highest cancelled share): query every group,
+calculate_ratio, then arrange_result with keep_first=1. Never rank by the raw count in that case.
+A question assuming a fact about one record ('why was deal X cancelled'): query that record's status,
+paid_on and delivered_on and answer with them. Show its real state; never reply only that reasons are
+not stored. A record number in words means digits: 'yuz ming birinchi', 'сто тысяч один' = 100001.
+'Amalga oshmagan', 'не состоялось' mean is_cancelled. Unpaid but not cancelled: paid_on IS NULL AND NOT
+is_cancelled. Paid late: paid_on > payment_due. Delivered late: delivered_on > delivery_due. Active
+contracts: valid_until >= DATE '2026-10-30'. 'Gacha', 'до' a year excludes that year.
+Broad goods ('paxta', 'хлопок'): product_family of the raw goods; say which by selecting it.
 A city is not a region value: filter LOWER(warehouse_address) LIKE with its spelling in the data.
-Many records can share a top value, and ORDER BY with LIMIT 1 hides that: query MAX first, then count
-the records holding it. 2026 stops on 30 October: to compare it with a full year, select the full
+2026 stops on 30 October: to compare it with a full year, select the full
 earlier year and the same dates of that year as separate FILTER columns.
-A date that does not exist, such as 2023-02-29: no query, finish unavailable, reason outside_dates.
 Broker fees and commissions are not in the data: reason missing_field.
 A USD rate with no date means the latest: ORDER BY rate_date DESC LIMIT 1, period=not_needed.
 
@@ -175,7 +200,8 @@ Average unit price = SUM(amount) / SUM(volume) for one compatible currency and u
 Use query_registry to return numerator and denominator, then calculate_ratio referencing its query_id.
 calculate_ratio operation ratio divides; percentage multiplies that ratio by 100;
 change_percent computes (numerator-denominator)/denominator*100; share_percent computes each row's
-part of the column total. Operands must be query fields.
+part of the column total; difference, add, multiply, percent_of and range_size are as the tool says.
+Operands must be fields of the cited result, including earlier calculated columns.
 Final price is amount / volume, NOT starting_price or base_price.
 unit_price is amount / volume per deal, in that deal's own currency and unit. To rank deals by
 price, filter one currency and one unit, then ORDER BY unit_price. An average over many deals is
