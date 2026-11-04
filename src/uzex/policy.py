@@ -182,19 +182,23 @@ def file_preference(question: str) -> str:
     return "auto"
 
 
+FILE_WORD = re.compile(r"(?:csv|excel|xlsx|eksel\w*|fayl\w*|file\w*)")
+EXPORT_FILLER = set(
+    "shu shuni shularni shunday bu buni bularni natija natijani natijalarni javob javobni "
+    "hammasi hammasini iltimos menga mana ham ni qilib qil qiling qilibber ber bering berib "
+    "yubor yuboring yuborib jonat jonating jonatib formatida formatda formatga korinishida "
+    "tashla tashlang v vide formate kak eto etot etu eti rezultat tablitsu mne pojaluysta "
+    "prishli prishlite otprav otpravte day dayte skachat skinte skin send give me it this "
+    "as please download export".split()
+)
+
+
 def export_followup(question: str) -> bool:
-    return normalize(question) in {
-        "csv",
-        "csv ber",
-        "csv qilib ber",
-        "csv formatida",
-        "csv faylni yubor",
-        "csv faylini yubor",
-        "v csv",
-        "prishli csv",
-        "otprav csv",
-        "skachat csv",
-    }
+    tokens = normalize(question).split()
+    has_file_word = any(FILE_WORD.fullmatch(token) for token in tokens)
+    return has_file_word and all(
+        FILE_WORD.fullmatch(token) or token in EXPORT_FILLER for token in tokens
+    )
 
 
 def attach_csv(question: str, answer) -> bool:

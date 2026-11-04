@@ -155,22 +155,30 @@ class State:
                     (chat_id, json.dumps(value, ensure_ascii=False)),
                 )
 
-    def latest_answer(self, chat_id: int) -> Answer | None:
+    def latest_result(self, chat_id: int) -> dict | None:
         rows = self.db.execute(
-            "SELECT result FROM jobs WHERE chat_id=? AND result IS NOT NULL AND status='sent' ORDER BY received DESC, update_id DESC LIMIT 20",
+            "SELECT id, result FROM jobs WHERE chat_id=? AND result IS NOT NULL AND status='sent' ORDER BY received DESC, update_id DESC LIMIT 20",
             (chat_id,),
         ).fetchall()
         for row in rows:
-            payload = json.loads(row[0])
+            payload = json.loads(row["result"])
             if payload.get("source_csv"):
                 return None
-            if payload.get("answer"):
-                return (
-                    Answer.model_validate(payload["answer"])
-                    if payload["answer"].get("outcome") == "answer"
-                    else None
-                )
+            stored = payload.get("answer")
+            if not stored or stored.get("outcome") == "about":
+                continue
+            if stored.get("outcome") != "answer":
+                return None
+            return {
+                "job_id": payload.get("source_job_id", row["id"]),
+                "page": payload.get("page", 0),
+                "answer": Answer.model_validate(stored),
+            }
         return None
+
+    def latest_answer(self, chat_id: int) -> Answer | None:
+        latest = self.latest_result(chat_id)
+        return latest["answer"] if latest else None
 
     def answer_for(self, job_id: str, chat_id: int) -> Answer | None:
         row = self.db.execute(

@@ -10,6 +10,7 @@ from openai import AsyncOpenAI
 from uzex.config import Settings
 from uzex.database import Database, calculate_ratio, normalize
 from uzex.models import (
+    AboutPrevious,
     Answer,
     AskClarification,
     Calculation,
@@ -79,6 +80,11 @@ TOOLS = [
         "Divide two numeric result columns with exact Decimal arithmetic, row by row.",
     ),
     tool(
+        "about_previous_result",
+        AboutPrevious,
+        "Answer a question about the previous stored result without querying: whether it is complete, how it was calculated, its source, whether cancelled deals are included, confidence in it, showing its next page, or sending it as a file.",
+    ),
+    tool(
         "finish",
         Finish,
         "End the turn using a real evidence ID or a fixed unavailable/clarification reason.",
@@ -109,6 +115,7 @@ class Engine:
         language: str | None = None,
         history: list | None = None,
         pending: dict | None = None,
+        previous: Answer | None = None,
     ) -> Answer:
         start = time.monotonic()
         request_id = uuid.uuid4().hex[:12]
@@ -118,7 +125,7 @@ class Engine:
                 async with self.semaphore:
                     if not self.client:
                         raise RuntimeError("Model credentials are missing")
-                    result = await self._run(question, language, history or [], pending)
+                    result = await self._run(question, language, history or [], pending, previous)
         except Exception as error:
             logger.warning("answer_failed request=%s type=%s", request_id, type(error).__name__)
             result = Answer(outcome="error", language=fallback_language, reason="service_failure")
@@ -133,7 +140,12 @@ class Engine:
         return result
 
     async def _run(
-        self, question: str, language: str | None, history: list, pending: dict | None = None
+        self,
+        question: str,
+        language: str | None,
+        history: list,
+        pending: dict | None = None,
+        previous: Answer | None = None,
     ) -> Answer:
         evidence = {}
         lookups = {}
@@ -241,6 +253,21 @@ class Engine:
                             missing_fields=clarification.fields,
                             candidates=lookups.get(clarification.candidates_query_id, [])[:5],
                             continues_pending=review.continuation,
+                        )
+                    elif call.name == "about_previous_result":
+                        about = AboutPrevious.model_validate(arguments)
+                        if previous is None or previous.evidence is None:
+                            return Answer(
+                                outcome="clarify",
+                                language=language or about.language,
+                                reason="missing_details",
+                                missing_fields=["reference"],
+                            )
+                        return Answer(
+                            outcome="about",
+                            language=language or about.language,
+                            topic=about.topic,
+                            evidence=previous.evidence,
                         )
                     elif call.name == "lookup_entities":
                         lookup = Lookup.model_validate(arguments)

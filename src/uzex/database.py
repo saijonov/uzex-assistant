@@ -440,11 +440,14 @@ class Database:
         draw = tree.copy()
         draw.set("expressions", [exp.column(key)])
         draw = draw.order_by(exp.Rand()).limit(count)
+        population_query = tree.copy()
+        population_query.set("expressions", sqlglot.parse_one("SELECT count(*)").expressions)
         with self.connect() as db:
             timer = threading.Timer(timeout, db.interrupt)
             timer.start()
             try:
                 keys = [row[0] for row in db.execute(draw.sql(dialect="duckdb")).fetchall()]
+                population = db.execute(population_query.sql(dialect="duckdb")).fetchone()[0]
             finally:
                 timer.cancel()
         if keys:
@@ -455,7 +458,7 @@ class Database:
             selected = exp.false()
         frozen = tree.where(selected).order_by(key).limit(count)
         result = self.query(frozen.sql(dialect="duckdb"), query_id, timeout)
-        return result.model_copy(update={"selection": "random"})
+        return result.model_copy(update={"selection": "random", "population": population})
 
     def query(self, sql: str, query_id: str, timeout: float = 8) -> Evidence:
         tree, table = validate_query(sql)
@@ -605,6 +608,11 @@ class Database:
                     row_limit=row_limit,
                     expressions=expressions,
                     selected_record_count=selected_count,
+                    available_columns=[
+                        column[0]
+                        for column in self.schema[table]
+                        if column[0] not in {"source_file", "source_row"}
+                    ],
                 )
             finally:
                 timer.cancel()

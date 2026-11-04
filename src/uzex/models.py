@@ -67,6 +67,19 @@ class AskClarification(StrictModel):
     candidates_query_id: str | None
 
 
+class AboutPrevious(StrictModel):
+    language: Literal["uz", "ru"]
+    topic: Literal[
+        "completeness",
+        "method",
+        "source",
+        "cancellation",
+        "confidence",
+        "next_page",
+        "export",
+    ]
+
+
 class Calculation(StrictModel):
     query_id: str
     numerator: str
@@ -111,12 +124,25 @@ class Evidence(BaseModel):
     selected_record_count: int | None = None
     row_limit: int = 100
     selection: Literal["query", "random"] = "query"
+    population: int | None = None
+    available_columns: list[str] = Field(default_factory=list)
+    requested_count: int | None = None
+    grouped: bool = False
+
+    @property
+    def capped(self) -> bool:
+        return self.truncated or (
+            not self.grouped
+            and len(self.rows) >= self.row_limit
+            and self.matched_count > len(self.rows)
+        )
 
 
 class Answer(BaseModel):
-    outcome: Literal["answer", "no_match", "unavailable", "clarify", "error"]
+    outcome: Literal["answer", "no_match", "unavailable", "clarify", "error", "about"]
     language: Literal["uz", "ru"] = "uz"
     reason: str = "none"
+    topic: str | None = None
     evidence: Evidence | None = None
     candidates: list[dict] = Field(default_factory=list)
     elapsed_seconds: float = 0

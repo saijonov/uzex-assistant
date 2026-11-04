@@ -30,8 +30,10 @@ from uzex.interface import text as ui_text
 from uzex.models import Answer
 from uzex.policy import attach_csv, export_followup, file_preference, resolve_pending_reply
 from uzex.render import (
+    all_shown_text,
     error_text,
     export_csv,
+    memory_text,
     render_answer,
     render_sources,
     split_text,
@@ -82,11 +84,17 @@ def csv_caption(answer: Answer) -> str:
         ),
         answer.language,
     )
-    if data.truncated:
+    if data.capped:
+        total = f"{data.matched_count:,}".replace(",", " ")
         caption += tr(
             (f"\nDastlabki {data.row_limit} qator.", f"\nПервые {data.row_limit} строк."),
             answer.language,
         )
+        if not data.grouped:
+            caption += tr(
+                (f" Jami mos yozuvlar: {total}.", f" Всего подходящих записей: {total}."),
+                answer.language,
+            )
     return caption
 
 
@@ -312,6 +320,7 @@ class Service:
             self.state.set_pending(chat_id, None)
             return {"texts": [], "source_csv": filename, "caption": caption}
         pending = resolve_pending_reply(pending, text)
+        latest = self.state.latest_result(chat_id)
         remaining = self.engine.settings.answer_timeout_seconds - (time.time() - job["received"])
         if remaining <= 1:
             answer = Answer(outcome="error", language=guess_language(text))
@@ -319,15 +328,19 @@ class Service:
             typing = asyncio.create_task(self.typing(chat_id))
             try:
                 async with asyncio.timeout(remaining):
-                    answer = await self.engine.answer(text, None, chat["history"], pending)
+                    answer = await self.engine.answer(
+                        text, None, chat["history"], pending, latest["answer"] if latest else None
+                    )
             except TimeoutError:
                 answer = Answer(outcome="error", language=guess_language(text))
             finally:
                 typing.cancel()
                 await asyncio.gather(typing, return_exceptions=True)
+        if answer.outcome == "about":
+            return self.about_previous(chat_id, text, answer, latest)
         rendered = render_answer(answer)
         if answer.outcome != "error":
-            self.state.remember(chat_id, text, rendered)
+            self.state.remember(chat_id, text, memory_text(answer, rendered))
             if answer.outcome == "clarify":
                 original = (
                     pending["question"] + "\nUser clarification: " + text
@@ -362,6 +375,34 @@ class Service:
             result["attach_csv"] = True
             result["caption"] = csv_caption(answer)
         return result
+
+    def about_previous(self, chat_id: int, text: str, answer: Answer, latest: dict) -> dict:
+        self.state.set_pending(chat_id, None)
+        stored = latest["answer"].model_copy(update={"language": answer.language})
+        if answer.topic == "export":
+            return {
+                "texts": [],
+                "csv_answer": stored.model_dump(mode="json"),
+                "caption": csv_caption(stored),
+            }
+        if answer.topic == "next_page":
+            page = latest["page"] + 1
+            if page <= (len(stored.evidence.rows) - 1) // 10:
+                self.state.remember(chat_id, text, f"Showed page {page + 1} of the stored result.")
+                return {
+                    "texts": split_text(render_answer(stored, page)),
+                    "answer": stored.model_dump(mode="json"),
+                    "source_job_id": latest["job_id"],
+                    "page": page,
+                }
+            rendered = all_shown_text(stored)
+        else:
+            rendered = render_answer(answer)
+        self.state.remember(chat_id, text, rendered)
+        return {
+            "texts": split_text(rendered),
+            "answer": answer.model_copy(update={"evidence": None}).model_dump(mode="json"),
+        }
 
     async def deliver(self, job: dict, result: dict):
         texts = result["texts"]
