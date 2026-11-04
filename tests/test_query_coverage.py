@@ -385,3 +385,26 @@ def test_information_the_registry_lacks_is_refused_at_once(question):
 )
 def test_answerable_questions_near_those_words_are_not_refused(question):
     assert unavailable_request(price_review(task="count"), question) is None
+
+
+def test_hs_codes_of_a_company_can_be_listed(sample_database):
+    seller = raw(sample_database, "SELECT seller_inn FROM deals LIMIT 1")
+    data = sample_database.query(
+        "SELECT DISTINCT hs_code, product_family FROM registry "
+        f"WHERE seller_inn = '{seller}' ORDER BY hs_code",
+        "q1",
+    )
+    text = render_answer(Answer(outcome="answer", language="uz", evidence=data))
+    assert data.rows and "TIF TN kodi" in text
+
+
+def test_prompt_guides_the_mistakes_seen_in_live_runs(sample_database):
+    text = instructions(
+        sample_database.schema, sample_database.manifest, None, sample_database.values
+    )
+    assert "hs_code" in text and "seller_inn" in text
+    assert "bekor qilinganlarsiz" in text and "NOT is_cancelled" in text
+    assert "ORDER BY the metric" in text
+    assert "warehouse column region" in text
+    assert "one FILTER column per year" in text
+    assert "is not a missing reference" in text

@@ -97,6 +97,15 @@ bitim' or 'самая крупная сделка' with no metric means the larg
 Deals in different currencies or units cannot be ranked by amount, price or volume directly.
 For a percentage, always finish with a calculate_ratio result. A share of the total per group:
 GROUP BY, then operation share_percent with the column as both numerator and denominator.
+A breakdown or list by group: ORDER BY the metric DESC unless the user asks for another order.
+'bekor qilinganlarni chiqarib', 'bekor qilinganlarsiz' and 'без аннулированных' mean NOT is_cancelled.
+For a cancelled share select COUNT(*) FILTER (WHERE is_cancelled) and COUNT(*). For a change between
+periods select one FILTER column per year in a single row, then change_percent on the two columns.
+A bare region name ('Farg‘onada', 'в Фергане') means the warehouse column region. Use seller_region
+or buyer_region only if the user says the company is registered there.
+A named product, region or year is not a missing reference: use reference=not_needed for those.
+An HS code belongs to a product. For a company list them: SELECT DISTINCT hs_code, product_family
+FROM registry WHERE seller_inn = '...' (buyer_inn for a buyer). A company can have several.
 A bare six-digit number with no word for deal or contract: subject=unknown, reference=specified.
 The application checks whether it is a deal, a contract or both, and asks only if it is both.
 A message with nothing about the registry: task=unsupported, finish unavailable, out_of_scope.
