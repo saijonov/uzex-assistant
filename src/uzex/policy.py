@@ -27,6 +27,13 @@ NOT_AN_IDENTIFIER = (
     r"yil\w*|god\w*|xona\w*|tsifr\w*|znak\w*|raqam\w*)\b)"
 )
 ASKS_HOW_MANY_EXIST = re.compile(r"\b(?:bormi|bor mi|est|yest|imeetsya)\b")
+AMOUNT_WORD = (
+    r"narx\w*|summa\w*|tsen\w*|qiymat\w*|qimmat\w*|arzon\w*|doroje|deshevle|bolshe|menshe|"
+    r"svishe|vishe|nije|ot|do"
+)
+BARE_NUMBER = re.compile(
+    rf"(?:\b(?P<amount>{AMOUNT_WORD}) )?\b(?P<number>\d{{6}})\b{NOT_AN_IDENTIFIER}"
+)
 NUMBER_BEFORE_WORD = re.compile(rf"\b(?P<number>\d+){NUMBER_FILLER} {RECORD_WORDS}\b")
 WORD_BEFORE_NUMBER = re.compile(
     rf"\b{RECORD_WORDS}{NUMBER_FILLER} (?P<number>\d+)\b{NOT_AN_IDENTIFIER}"
@@ -247,11 +254,13 @@ def malformed_identifier(question: str) -> str | None:
 def bare_record_number(review: RequestReview, question: str, pending: dict | None) -> str | None:
     if review.subject in {"deal", "contract"}:
         return None
-    context = " ".join([question, (pending or {}).get("question", "")])
-    if RECORD_KIND_WORDS.search(normalize(context)):
+    context = normalize(" ".join([question, (pending or {}).get("question", "")]))
+    if RECORD_KIND_WORDS.search(context):
         return None
-    match = RECORD_NUMBER.search(context)
-    return match.group() if match else None
+    for match in BARE_NUMBER.finditer(context):
+        if not match["amount"]:
+            return match["number"]
+    return None
 
 
 def cancellation_gap(review: RequestReview, question: str, data) -> str | None:
