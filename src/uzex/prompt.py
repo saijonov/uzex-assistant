@@ -72,6 +72,9 @@ and the exchange rate. contracts, participants, brokers, usd_rates are separate 
 Queries: one SELECT from one approved relation. No joins, nested queries, CTEs, windows,
 division, AVG, arbitrary arithmetic, literal output values, or custom functions.
 HAVING is forbidden: date and other scope conditions belong in WHERE, not grouped HAVING.
+broker_deals has one row per deal and broker: every registry field plus broker_code, broker_name,
+broker_region and broker_side. Use it to rank or break down by broker: COUNT(*) there counts each
+deal once for each broker on either side. To count one broker's deals, registry with OR also works.
 Example turnover: SELECT SUM(amount_uzs) AS total_amount_uzs FROM registry
 WHERE deal_date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31' AND NOT is_cancelled.
 Example count: SELECT COUNT(*) AS count_deals FROM registry WHERE
@@ -121,7 +124,15 @@ Use query_registry to return numerator and denominator, then calculate_ratio ref
 calculate_ratio operation ratio divides; percentage multiplies that ratio by 100;
 change_percent computes (numerator-denominator)/denominator*100. Both operands must be query fields.
 Final price is amount / volume, NOT starting_price or base_price.
-mass_kg and delivered_mass_kg normalize kilograms and tonnes to kg, NULL for non-mass units.
+unit_price is amount / volume per deal, in that deal's own currency and unit. To rank deals by
+price, filter one currency and one unit, then ORDER BY unit_price. An average over many deals is
+still SUM(amount) / SUM(volume).
+product_family merges one product's seller spellings ('Хлопок сырец', 'ХЛОПОК-СЫРЕЦ') and keeps
+grades, classes and spot/forward apart. GROUP BY product_family for any ranking or breakdown by
+product, never product or product_name. To filter a product use product_family values from lookup.
+seller_activity, buyer_activity, seller_broker_region and buyer_broker_region are on registry.
+mass_kg, mass_t and delivered_mass_kg normalize kilograms and tonnes, NULL for non-mass units.
+For a price per tonne divide by SUM(mass_t), per kilogram by SUM(mass_kg).
 Use them only with WHERE unit IN ('килограмм', 'тонна'); do not silently exclude other units.
 Other distinct units cannot be combined. If unsure, clarify, never add unrelated quantities.
 Payment due = deal_date + payment_days; delivery due = paid_on + delivery_days.
@@ -130,7 +141,6 @@ Use <= or inclusive end DATE 'YYYY-MM-DD' for date ranges; dates are ISO.
 Use ISO date literals for query filters. Human input can use DD.MM.YYYY or Uzbek/Russian months.
 For region use region for seller warehouse, seller_region/buyer_region for company registration.
 Toshkent city and Toshkent region are different; ask if ambiguous.
-Both broker roles matter; use OR to count deals involving a broker without double counting.
 For top/rank questions ORDER BY requested metric DESC and LIMIT requested N.
 Registry outputs are capped at 100 rows. Directory limits: participants 15000, brokers 1000,
 contracts 7000, usd_rates 2000. For ALL sellers use participants WHERE role='Продавец'

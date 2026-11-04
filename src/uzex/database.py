@@ -13,9 +13,11 @@ from sqlglot import exp
 
 from uzex.models import Evidence
 
-TABLES = {"registry", "contracts", "participants", "brokers", "usd_rates"}
+TABLES = {"registry", "broker_deals", "contracts", "participants", "brokers", "usd_rates"}
+DEAL_TABLES = {"registry", "broker_deals"}
 ROW_LIMITS = {
     "registry": 100,
+    "broker_deals": 100,
     "contracts": 7000,
     "participants": 15000,
     "brokers": 1000,
@@ -292,9 +294,13 @@ class Database:
                 "SELECT min(rate_date), max(rate_date) FROM usd_rates"
             ).fetchone()
             self.manifest["usd_rates_coverage"] = [str(first_rate), str(last_rate)]
+            existing = {
+                row[0]
+                for row in db.execute("SELECT table_name FROM information_schema.tables").fetchall()
+            }
             self.schema = {
                 table: [(r[0], r[1]) for r in db.execute(f"DESCRIBE {table}").fetchall()]
-                for table in sorted(TABLES)
+                for table in sorted(TABLES & existing)
             }
             self.catalog = self._catalog(db)
             self.values = self._column_values(db, PROMPT_VALUE_COLUMNS)
@@ -368,8 +374,13 @@ class Database:
             columns = [c[0] for c in result.description]
             return [dict(zip(columns, row, strict=True)) for row in result.fetchall()]
 
+        family = (
+            ", product_family"
+            if any(c[0] == "product_family" for c in self.schema["registry"])
+            else ""
+        )
         return {
-            "product": fetch("SELECT DISTINCT product_name AS name FROM registry"),
+            "product": fetch(f"SELECT DISTINCT product_name AS name{family} FROM registry"),
             "company": fetch("SELECT inn, name, role FROM participants"),
             "broker": fetch("SELECT broker_code, inn, name FROM brokers"),
             "region": fetch("SELECT DISTINCT region AS name, region_ru FROM registry"),
@@ -423,7 +434,9 @@ class Database:
             "participants": "inn",
             "brokers": "broker_code",
             "usd_rates": "rate_date",
-        }[table]
+        }.get(table)
+        if key is None:
+            raise ValueError("Sample deals from registry, not broker_deals")
         draw = tree.copy()
         draw.set("expressions", [exp.column(key)])
         draw = draw.order_by(exp.Rand()).limit(count)
@@ -472,11 +485,12 @@ class Database:
                 scope = tree.copy()
                 for key in ("group", "having", "order", "limit", "distinct"):
                     scope.set(key, None)
-                if table == "registry":
+                if table in DEAL_TABLES:
+                    records = "count(DISTINCT deal_id)" if table == "broker_deals" else "count(*)"
                     scope.set(
                         "expressions",
                         sqlglot.parse_one(
-                            "SELECT count(*) AS n, min(deal_date), max(deal_date), "
+                            f"SELECT {records} AS n, min(deal_date), max(deal_date), "
                             "list(DISTINCT currency), list(DISTINCT unit)"
                         ).expressions,
                     )
@@ -537,7 +551,7 @@ class Database:
                 ]
                 selected_count = None
                 if (
-                    table == "registry"
+                    table in DEAL_TABLES
                     and not tree.find(exp.AggFunc)
                     and not tree.args.get("group")
                     and not tree.args.get("distinct")

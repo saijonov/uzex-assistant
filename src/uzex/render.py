@@ -7,6 +7,7 @@ import sqlglot
 from sqlglot import exp
 from sqlglot.errors import SqlglotError
 
+from uzex.database import DEAL_TABLES
 from uzex.localization import localize
 from uzex.models import Answer, Evidence
 from uzex.policy import CLARIFICATION_TEXT
@@ -19,6 +20,16 @@ LABELS = {
     "deal_time": ("Vaqt", "Время"),
     "product_name": ("Tovar", "Товар"),
     "product": ("Mahsulot", "Продукт"),
+    "product_family": ("Tovar (umumiy nom)", "Товар (единое название)"),
+    "unit_price": ("Birlik narxi", "Цена за единицу"),
+    "mass_t": ("Massa, t", "Масса, т"),
+    "seller_activity": ("Sotuvchi faoliyati", "Вид деятельности продавца"),
+    "buyer_activity": ("Xaridor faoliyati", "Вид деятельности покупателя"),
+    "seller_broker_region": ("Sotuvchi brokeri hududi", "Регион брокера продавца"),
+    "buyer_broker_region": ("Xaridor brokeri hududi", "Регион брокера покупателя"),
+    "broker_name": ("Broker", "Брокер"),
+    "broker_region": ("Broker hududi", "Регион брокера"),
+    "broker_side": ("Broker tomoni", "Сторона брокера"),
     "seller_name": ("Sotuvchi", "Продавец"),
     "buyer_name": ("Xaridor", "Покупатель"),
     "seller_inn": ("Sotuvchi STIR", "ИНН продавца"),
@@ -274,6 +285,7 @@ DETAIL_SECTIONS = [
             "mass_kg",
             "amount",
             "currency",
+            "unit_price",
             "starting_price",
             "base_price",
             "amount_uzs",
@@ -307,14 +319,18 @@ DETAIL_SECTIONS = [
             "seller_inn",
             "seller_region",
             "seller_vat_payer",
+            "seller_activity",
             "seller_broker_name",
             "seller_broker_code",
+            "seller_broker_region",
             "buyer_name",
             "buyer_inn",
             "buyer_region",
             "buyer_vat_payer",
+            "buyer_activity",
             "buyer_broker_name",
             "buyer_broker_code",
+            "buyer_broker_region",
         ],
     ),
     (("Shartnoma muddati", "Срок контракта"), ["registered_on", "valid_until"]),
@@ -324,7 +340,7 @@ DETAIL_SECTIONS = [
 def render_detail(row: dict, data: Evidence, language: str) -> list[str]:
     identity = row["deal_id"]
     lines = [tr((f"{identity}-bitim haqida ma’lumot.", f"Данные по сделке {identity}."), language)]
-    skip = {"source_file", "source_row"}
+    skip = {"source_file", "source_row", "product_family", "mass_t"}
     if "status" in row:
         skip.add("is_cancelled")
     if row.get("product_name"):
@@ -485,7 +501,7 @@ def render_answer(answer: Answer, page: int = 0) -> str:
         lines.append(
             tr(
                 ("Hisobga olingan yozuvlar", "Учтено записей")
-                if data.table == "registry"
+                if data.table in DEAL_TABLES
                 else ("Topilgan yozuvlar", "Найдено записей"),
                 lang,
             )

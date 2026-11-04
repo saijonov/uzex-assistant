@@ -99,6 +99,7 @@ PATTERNS = [
 ]
 DESCRIPTIVE_FIELDS = {
     "product",
+    "product_family",
     "product_name",
     "grade",
     "product_type",

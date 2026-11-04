@@ -1,11 +1,14 @@
 import hashlib
 import json
 import os
+import re
 import tempfile
 import zipfile
 from pathlib import Path
 
 import duckdb
+
+from uzex.terminology import translate_description
 
 CONTRACT_FIELDS = {
     "Номер контракта": "contract_id",
@@ -46,6 +49,18 @@ DEAL_FIELDS = {
     "Брокер продавца": "seller_broker_code",
     "Брокер покупателя": "buyer_broker_code",
 }
+
+
+def product_key(product: str) -> str:
+    text = re.sub(r",\s*(?:marka|o‘lcham|nav|tur|sinf):", "", translate_description(product))
+    return re.sub(r"[^0-9a-zа-яёўқғҳ]", "", text.casefold())
+
+
+def product_families(counts: list[tuple[str, int]]) -> dict[str, str]:
+    names: dict[str, str] = {}
+    for product, _ in sorted(counts, key=lambda item: (-item[1], item[0])):
+        names.setdefault(product_key(product), product)
+    return {product: names[product_key(product)] for product, _ in counts}
 
 
 def text_fields(mapping: dict[str, str]) -> list[str]:
@@ -169,23 +184,36 @@ def import_archive(archive: Path, destination: Path) -> dict:
                     ).fetchone()[0]
                     if duplicates:
                         raise ValueError(f"Duplicate or null keys in {table}")
+                counts = db.execute(
+                    "SELECT c.product, count(d.deal_id) FROM contracts c "
+                    "LEFT JOIN deals d USING (contract_id) GROUP BY c.product"
+                ).fetchall()
+                db.execute("ALTER TABLE contracts ADD COLUMN product_family VARCHAR")
+                db.executemany(
+                    "UPDATE contracts SET product_family = ? WHERE product = ?",
+                    [(family, product) for product, family in product_families(counts).items()],
+                )
                 db.execute("""
                     CREATE VIEW registry AS SELECT
-                      d.*, c.product, c.brand, c.size, c.grade, c.product_type,
+                      d.*, c.product, c.product_family, c.brand, c.size, c.grade, c.product_type,
                       c.product_class, c.hs_code, c.category, c.product_group, c.industry,
                       c.region_ru, c.currency, c.base_price, c.deposit_percent,
                       c.delivery_basis, c.packaging, c.warehouse_address,
                       c.payment_days, c.delivery_days, c.registered_on, c.valid_until,
                       s.name AS seller_name, s.region AS seller_region,
-                      s.vat_payer AS seller_vat_payer,
+                      s.vat_payer AS seller_vat_payer, s.activity AS seller_activity,
                       b.name AS buyer_name, b.region AS buyer_region,
-                      b.vat_payer AS buyer_vat_payer,
-                      sb.name AS seller_broker_name, bb.name AS buyer_broker_name,
+                      b.vat_payer AS buyer_vat_payer, b.activity AS buyer_activity,
+                      sb.name AS seller_broker_name, sb.region AS seller_broker_region,
+                      bb.name AS buyer_broker_name, bb.region AS buyer_broker_region,
                       fx.usd_uzs,
                       d.quantity_lots * d.lot_size AS volume,
                       d.delivered_lots * d.lot_size AS delivered_volume,
                       CASE WHEN d.unit = 'килограмм' THEN volume
                         WHEN d.unit = 'тонна' THEN volume * 1000 END AS mass_kg,
+                      CASE WHEN d.unit = 'килограмм' THEN volume * 0.001
+                        WHEN d.unit = 'тонна' THEN volume END AS mass_t,
+                      CAST(round(d.amount / volume, 2) AS DECIMAL(24,2)) AS unit_price,
                       CASE WHEN d.unit = 'килограмм' THEN delivered_volume
                         WHEN d.unit = 'тонна' THEN delivered_volume * 1000 END AS delivered_mass_kg,
                       CASE WHEN c.currency = 'Доллар США'
@@ -200,6 +228,24 @@ def import_archive(archive: Path, destination: Path) -> dict:
                     LEFT JOIN brokers sb ON d.seller_broker_code = sb.broker_code
                     LEFT JOIN brokers bb ON d.buyer_broker_code = bb.broker_code
                     LEFT JOIN usd_rates fx ON d.deal_date = fx.rate_date
+                """)
+                db.execute("""
+                    CREATE TABLE broker_deal_links AS
+                    SELECT deal_id, seller_broker_code AS broker_code,
+                      CASE WHEN seller_broker_code = buyer_broker_code
+                        THEN 'Обе стороны' ELSE 'Продавец' END AS broker_side
+                    FROM deals
+                    UNION ALL
+                    SELECT deal_id, buyer_broker_code, 'Покупатель' FROM deals
+                    WHERE buyer_broker_code <> seller_broker_code
+                """)
+                db.execute("""
+                    CREATE VIEW broker_deals AS
+                    SELECT r.*, l.broker_code, l.broker_side, x.name AS broker_name,
+                      x.region AS broker_region
+                    FROM broker_deal_links l
+                    JOIN registry r USING (deal_id)
+                    JOIN brokers x ON l.broker_code = x.broker_code
                 """)
                 invalid = db.execute("""
                     SELECT count(*) FROM registry WHERE currency IS NULL OR seller_name IS NULL

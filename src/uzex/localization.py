@@ -26,6 +26,7 @@ UZBEK = {
     "Двусторонний аукцион": "Ikki tomonlama auksion",
     "Продавец": "Sotuvchi",
     "Покупатель": "Xaridor",
+    "Обе стороны": "Ikkala tomon",
     "Да": "Ha",
     "Нет": "Yo‘q",
     "Прочие товары": "Boshqa tovarlar",
