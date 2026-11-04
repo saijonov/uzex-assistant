@@ -206,3 +206,9 @@ def test_hard_cases_cover_the_failures_found_after_the_first_live_run():
     assert {"company_hs_codes_uz", "income_refused_uz", "vat_payers_answerable_uz"} <= set(cases)
     assert cases["cancel_share_uz"]["category"] == "critical"
     assert cases["growth_uz"]["category"] == "critical"
+
+
+def test_percentages_accept_any_correct_rounding():
+    cases = {case["id"]: case for case in json.loads(CASES.read_text())}
+    assert "8.5478" in cases["growth_uz"]["turns"][0]["any_in_text"]
+    assert "6.7438" in cases["cancel_share_uz"]["turns"][0]["any_in_text"]

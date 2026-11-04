@@ -24,6 +24,10 @@ def plain(value: Decimal) -> str:
     return text
 
 
+def percent_forms(value: Decimal) -> list[str]:
+    return [rounded(value, places) for places in ("0.01", "0.001", "0.0001", "0.000001")]
+
+
 def rounded(value: Decimal, places: str = "0.01") -> str:
     return str(value.quantize(Decimal(places), rounding=ROUND_HALF_UP))
 
@@ -188,8 +192,8 @@ def facts(archive: Path) -> dict:
                 cement_per_tonne=rounded(cement_amount / cement_tonnes),
                 turnover_2024=plain(turnover_2024),
                 turnover_2025=plain(turnover_2025),
-                cancel_share=rounded(Decimal(out["status"][CANCELLED]) * 100 / total),
-                growth=rounded(
+                cancel_share=percent_forms(Decimal(out["status"][CANCELLED]) * 100 / total),
+                growth=percent_forms(
                     Decimal(out["year"][2025] - out["year"][2024]) * 100 / out["year"][2024]
                 ),
                 region_top=region_top[0],
@@ -431,14 +435,16 @@ def build(archive: Path) -> list[dict]:
         turn(
             "2025-yilda bitimlar soni 2024 ga nisbatan necha foiz o'sdi?",
             language="uz",
-            in_text=[f["growth"]],
+            any_in_text=f["growth"],
         ),
     )
     add(
         "cancel_share_uz",
         critical,
         turn(
-            "Bekor qilingan bitimlar ulushi necha foiz?", language="uz", in_text=[f["cancel_share"]]
+            "Bekor qilingan bitimlar ulushi necha foiz?",
+            language="uz",
+            any_in_text=f["cancel_share"],
         ),
     )
     add(
