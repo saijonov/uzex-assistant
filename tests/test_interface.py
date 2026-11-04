@@ -148,7 +148,7 @@ async def test_csv_contains_exact_answer_columns_and_explains_scope(tmp_path, sa
     result = await service.prepare(job)
     await service.deliver(job, result)
     document = service.bot.documents[0]
-    assert "1 qator, 3 ustun" in document["caption"]
+    assert "Qatorlar: 1. Ustunlar: 3." in document["caption"]
     rows = list(csv.reader(io.StringIO(document["document"].data.decode("utf-8-sig"))))
     assert rows[0] == ["deal_id", "seller_name", "seller_inn"]
     assert len(rows) == 2
@@ -184,6 +184,27 @@ def test_export_neutralizes_formulas(sample_database):
     data = sample_database.query("SELECT seller_name FROM registry WHERE deal_id='100001'", "q1")
     data.rows = [{"seller_name": "=IMPORTDATA(1)"}]
     assert "'=IMPORTDATA(1)" in export_csv(data).decode("utf-8-sig")
+
+
+async def test_empty_result_keeps_sources_without_empty_csv(tmp_path, sample_database):
+    client = ScriptedClient(
+        [
+            (
+                "query_registry",
+                {"sql": "SELECT seller_name FROM registry WHERE deal_id='999999999'"},
+            ),
+            finish("no_match"),
+        ]
+    )
+    service = make_service(tmp_path, sample_database, client)
+    service.state.enqueue(1, 1, {"type": "message", "text": "Кто продавец по сделке 999999999?"})
+    job = service.state.claim()
+    result = await service.prepare(job)
+    await service.deliver(job, result)
+    buttons = service.bot.messages[-1]["reply_markup"].inline_keyboard[0]
+    assert len(buttons) == 1
+    assert buttons[0].callback_data.startswith("sources:")
+    service.state.close()
 
 
 def test_authored_messages_have_no_long_dashes():

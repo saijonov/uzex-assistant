@@ -171,8 +171,8 @@ class Service:
                 rows, columns = len(data.rows), len(data.rows[0]) if data.rows else 0
                 caption = tr(
                     (
-                        f"Shu javob natijasi: {rows} qator, {columns} ustun.",
-                        f"Результат этого ответа: {rows} строк, {columns} столбцов.",
+                        f"Javob jadvali\nQatorlar: {rows}. Ustunlar: {columns}.",
+                        f"Таблица ответа\nСтрок: {rows}. Столбцов: {columns}.",
                     ),
                     answer.language,
                 )
