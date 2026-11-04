@@ -154,5 +154,162 @@
     "standalone_greetings_use_model": false,
     "conversation_and_menu_language_preserved": true,
     "greeting_with_question_routes_to_answer_engine": true
+  },
+  "clarification_delivery_review": {
+    "offline_tests": 151,
+    "main": {
+      "run_at_unix": 1793803914.9239419,
+      "model": "gpt-6.1-sol",
+      "total": 100,
+      "passed": 100,
+      "answerable": 92,
+      "answerable_passed": 92,
+      "safety": 8,
+      "safety_passed": 8,
+      "p95_seconds": 13.206,
+      "max_seconds": 29.414,
+      "failures": []
+    },
+    "initial_challenge": {
+      "run_at_unix": 1793803718.7709608,
+      "model": "gpt-6.1-sol",
+      "total": 32,
+      "passed": 31,
+      "answerable": 20,
+      "answerable_passed": 20,
+      "safety": 12,
+      "safety_passed": 11,
+      "p95_seconds": 19.446,
+      "max_seconds": 29.829,
+      "failures": [
+        "current_market_ru"
+      ]
+    },
+    "final_challenge": {
+      "run_at_unix": 1793804200.2941382,
+      "model": "gpt-6.1-sol",
+      "total": 32,
+      "passed": 32,
+      "answerable": 20,
+      "answerable_passed": 20,
+      "safety": 12,
+      "safety_passed": 12,
+      "p95_seconds": 12.978,
+      "max_seconds": 14.488,
+      "failures": []
+    },
+    "initial_failure_resolution": "Current-price question asked for a unit rather than declining. No fabricated answer. Added historical-price guard and reran challenge set.",
+    "service_path_checks": [
+      {
+        "question": "Nomida «сахар» bo‘lgan tovarlarning o‘rtacha vaznli birlik narxi qancha? Faqat so‘mlik, bekor qilinmagan bitimlar; ikki kasr xonasi.",
+        "outcome": "clarify",
+        "seconds": 2.656,
+        "passed": true,
+        "attach_csv": false,
+        "missing_fields": [
+          "period",
+          "unit"
+        ]
+      },
+      {
+        "question": "2025-yil, so‘m/kg hisobida",
+        "outcome": "answer",
+        "seconds": 12.268,
+        "passed": true,
+        "attach_csv": false,
+        "missing_fields": []
+      },
+      {
+        "question": "Shu davrdagi bitimlar soni?",
+        "outcome": "clarify",
+        "seconds": 1.896,
+        "passed": true,
+        "attach_csv": false,
+        "missing_fields": [
+          "period"
+        ]
+      },
+      {
+        "question": "2025",
+        "outcome": "answer",
+        "seconds": 6.083,
+        "passed": true,
+        "attach_csv": false,
+        "missing_fields": []
+      },
+      {
+        "question": "Narx qancha?",
+        "outcome": "clarify",
+        "seconds": 1.839,
+        "passed": true,
+        "attach_csv": false,
+        "missing_fields": [
+          "product"
+        ]
+      },
+      {
+        "question": "100001-bitimning sotuvchisi kim?",
+        "outcome": "answer",
+        "seconds": 6.599,
+        "passed": true,
+        "attach_csv": false,
+        "missing_fields": []
+      },
+      {
+        "question": "100001-bitimning sotuvchisini CSV formatida ber",
+        "outcome": "answer",
+        "seconds": 5.704,
+        "passed": true,
+        "attach_csv": true,
+        "missing_fields": []
+      },
+      {
+        "question": "Все брокеры без CSV",
+        "outcome": "answer",
+        "seconds": 6.078,
+        "passed": true,
+        "attach_csv": false,
+        "missing_fields": []
+      },
+      {
+        "question": "CSV qilib ber",
+        "outcome": "clarify",
+        "seconds": 0.0,
+        "passed": true,
+        "attach_csv": false,
+        "missing_fields": [
+          "reference"
+        ]
+      },
+      {
+        "question": "100001-bitim sotuvchisi",
+        "outcome": "answer",
+        "seconds": 6.702,
+        "passed": true,
+        "attach_csv": true,
+        "missing_fields": []
+      }
+    ],
+    "region_followup": [
+      {
+        "question": "2025-yilda Toshkentda savdo aylanmasi qancha?",
+        "outcome": "clarify",
+        "seconds": 3.007
+      },
+      {
+        "question": "Toshkent shahri",
+        "outcome": "answer",
+        "seconds": 8.614
+      }
+    ],
+    "new_answer_export_buttons": false,
+    "csv_policy": "Explicit request or more than ten stored result rows, with text-only override. No empty or unsupported exports.",
+    "transport_note": "Real model and full dataset with fake Telegram transport. No new independent-account acceptance test claimed.",
+    "deployment": {
+      "docker_build": "passed",
+      "non_root_container_real_model_clarification": "Qaysi tovar haqida so‘rayapsiz?",
+      "local_service_restarted": true,
+      "health_check": "healthy"
+    }
   }
 }
