@@ -1,8 +1,9 @@
 import re
-import unicodedata
 from html import escape
 
 from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
+
+from uzex.database import normalize
 
 MENU = {
     "examples": ("Misollar", "Примеры"),
@@ -81,10 +82,8 @@ def menu_action(value: str) -> str | None:
     return next((action for action, labels in MENU.items() if value in labels), None)
 
 
-def greeting(value: str) -> tuple[str, str] | None:
-    normalized = unicodedata.normalize("NFKC", value).casefold()
-    normalized = " ".join(re.sub(r"[^\w\s]", " ", normalized).split())
-    if normalized in {
+SMALL_TALK = {
+    ("greeting_assalom", "uz"): {
         "assalomu alaykum",
         "assalomu aleykum",
         "assalom alaykum",
@@ -93,59 +92,51 @@ def greeting(value: str) -> tuple[str, str] | None:
         "salom aleykum",
         "assalomalaykum",
         "salomaleykum",
-        "ассалому алайкум",
-        "ассалому алейкум",
-        "ассалом алайкум",
-        "салом алайкум",
-    }:
-        return "greeting_assalom", "uz"
-    if normalized in {
+    },
+    ("thanks", "uz"): {
         "rahmat",
         "raxmat",
         "katta rahmat",
+        "katta raxmat",
         "ok rahmat",
         "tashakkur",
-        "рахмат",
-        "катта рахмат",
-        "ташаккур",
         "thanks",
         "thank you",
-    }:
-        return "thanks", "uz"
-    if normalized in {
-        "спасибо",
-        "спасибо большое",
-        "большое спасибо",
-        "спасибо понятно",
-        "понятно спасибо",
-        "благодарю",
-    }:
-        return "thanks", "ru"
-    if normalized in {
+    },
+    ("thanks", "ru"): {
+        "spasibo",
+        "spasibo bolshoe",
+        "bolshoe spasibo",
+        "spasibo ponyatno",
+        "ponyatno spasibo",
+        "blagodaryu",
+    },
+    ("about", "uz"): {
         "nima qila olasan",
         "nimalar qila olasan",
         "nima qilasan",
         "qanday yordam bera olasan",
         "sen kimsan",
         "siz kimsiz",
-        "нима қила оласан",
-        "сен кимсан",
-        "сиз кимсиз",
         "what can you do",
         "who are you",
-    }:
-        return "about", "uz"
-    if normalized in {
-        "что ты умеешь",
-        "что умеешь",
-        "что вы умеете",
-        "кто ты",
-        "кто вы",
-        "чем можешь помочь",
-        "чем можете помочь",
-    }:
-        return "about", "ru"
-    if normalized in {
+    },
+    ("about", "ru"): {
+        "chto ti umeesh",
+        "chto ty umeesh",
+        "chto umeesh",
+        "chto vi umeete",
+        "chto vy umeete",
+        "kto ti",
+        "kto ty",
+        "kto vi",
+        "kto vy",
+        "chem mojesh pomoch",
+        "chem mozhesh pomoch",
+        "chem mojete pomoch",
+        "chem mozhete pomoch",
+    },
+    ("greeting", "uz"): {
         "hello",
         "hi",
         "hey",
@@ -156,28 +147,36 @@ def greeting(value: str) -> tuple[str, str] | None:
         "xayrli tong",
         "xayrli kun",
         "xayrli kech",
-        "салом",
-        "ассалом",
-        "яхшимисиз",
-        "хайрли тонг",
-        "хайрли кун",
-        "хайрли кеч",
-    }:
-        return "greeting", "uz"
-    if normalized in {
-        "привет",
-        "приветствую",
-        "здравствуйте",
-        "здравствуй",
-        "здрасьте",
-        "добрый день",
-        "доброе утро",
-        "добрый вечер",
-        "привет как дела",
-        "здравствуйте как дела",
-        "салам",
-    }:
-        return "greeting", "ru"
+    },
+    ("greeting", "ru"): {
+        "privet",
+        "privetstvuyu",
+        "zdravstvuyte",
+        "zdravstvuite",
+        "zdrastvuyte",
+        "zdravstvuy",
+        "zdraste",
+        "zdrasti",
+        "dobriy den",
+        "dobryy den",
+        "dobry den",
+        "dobroe utro",
+        "dobriy vecher",
+        "dobryy vecher",
+        "dobry vecher",
+        "privet kak dela",
+        "zdravstvuyte kak dela",
+    },
+}
+
+
+def greeting(value: str) -> tuple[str, str] | None:
+    normalized = normalize(value)
+    if normalized == "salam":
+        return "greeting", "ru" if re.search("[а-яА-ЯёЁ]", value) else "uz"
+    for reply, phrases in SMALL_TALK.items():
+        if normalized in phrases:
+            return reply
     return None
 
 

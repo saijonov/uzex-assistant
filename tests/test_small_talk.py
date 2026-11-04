@@ -41,3 +41,39 @@ def test_off_topic_and_unsupported_refusals_explain_themselves():
     assert "количеств" in render_answer(missing).casefold()
     unsupported = Answer(outcome="unavailable", language="uz", reason="unsupported")
     assert "so‘rash" in render_answer(unsupported)
+
+
+@pytest.mark.parametrize(
+    "text,key,language",
+    [
+        ("privet", "greeting", "ru"),
+        ("Privet!", "greeting", "ru"),
+        ("zdravstvuyte", "greeting", "ru"),
+        ("zdravstvuite", "greeting", "ru"),
+        ("zdrasti", "greeting", "ru"),
+        ("dobriy den", "greeting", "ru"),
+        ("dobryy den", "greeting", "ru"),
+        ("dobroe utro", "greeting", "ru"),
+        ("Салам", "greeting", "ru"),
+        ("salam", "greeting", "uz"),
+        ("Assalomu aleykum", "greeting_assalom", "uz"),
+        ("ассалому алайкум", "greeting_assalom", "uz"),
+        ("spasibo", "thanks", "ru"),
+        ("Spasibo bolshoe", "thanks", "ru"),
+        ("raxmat", "thanks", "uz"),
+        ("Рахмат", "thanks", "uz"),
+        ("kto ty", "about", "ru"),
+        ("chto ty umeesh", "about", "ru"),
+        ("сен кимсан", "about", "uz"),
+    ],
+)
+def test_small_talk_is_recognised_in_either_script(text, key, language):
+    assert greeting(text) == (key, language)
+
+
+@pytest.mark.parametrize(
+    "text",
+    ["privet, 2025-yilda nechta bitim?", "salam nechta broker bor", "spasibo za otvet na vopros 5"],
+)
+def test_a_greeting_inside_a_question_is_not_small_talk(text):
+    assert greeting(text) is None
