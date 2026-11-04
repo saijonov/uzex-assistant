@@ -32,9 +32,11 @@ COPY = {
     "help": (
         "Yordam\nBitim raqami, tovar yoki kompaniya nomini yozing. Hisob uchun davr va birlikni ham ko‘rsating.\n\n"
         "Menyu tilini o‘zgartirsangiz ham, javob savolingiz tilida bo‘ladi. Boshqa tilda javob kerak bo‘lsa, savolda ayting.\n\n"
+        "CSV kerak bo‘lsa, «CSV qilib ber» deb yozing.\n\n"
         "Bitimlar: 03.01.2022 dan 30.10.2026 gacha.\nBarcha ma’lumotlar o‘ylab topilgan.",
         "Помощь\nУкажите номер сделки, товар или компанию. Для расчёта добавьте период и единицу.\n\n"
         "Язык меню не меняет язык ответов. Отвечаем на языке вопроса. Другой язык можно попросить в самом вопросе.\n\n"
+        "Нужен файл? Напишите «Пришли CSV».\n\n"
         "Сделки: с 03.01.2022 по 30.10.2026.\nВсе данные вымышленные.",
     ),
     "examples": (

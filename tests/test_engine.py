@@ -8,8 +8,11 @@ from uzex.render import render_answer, split_text
 
 
 class ScriptedClient:
-    def __init__(self, steps):
+    def __init__(self, steps, review_first=True):
         self.responses = self
+        steps = list(steps)
+        if review_first and (not steps or steps[0][0] != "review_request"):
+            steps.insert(0, review())
         self.steps = iter(steps)
         self.requests = []
 
@@ -29,6 +32,21 @@ class ScriptedClient:
 
     async def close(self):
         pass
+
+
+def review(**overrides):
+    values = {
+        "language": "ru",
+        "task": "detail",
+        "subject": "deal",
+        "reference": "not_needed",
+        "entity_text": None,
+        "period": "not_needed",
+        "ranking_by": "not_needed",
+        "missing_fields": [],
+        "continuation": False,
+    }
+    return "review_request", {**values, **overrides}
 
 
 def finish(outcome="answer", query_id="q1", reason="none"):

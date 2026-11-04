@@ -18,6 +18,9 @@ class State:
             CREATE TABLE IF NOT EXISTS chats (
                 chat_id INTEGER PRIMARY KEY, language TEXT, history TEXT NOT NULL DEFAULT '[]'
             );
+            CREATE TABLE IF NOT EXISTS pending_questions (
+                chat_id INTEGER PRIMARY KEY, body TEXT NOT NULL
+            );
             CREATE TABLE IF NOT EXISTS jobs (
                 id TEXT PRIMARY KEY, update_id INTEGER UNIQUE NOT NULL, chat_id INTEGER NOT NULL,
                 payload TEXT NOT NULL, received REAL NOT NULL, status TEXT NOT NULL DEFAULT 'queued',
@@ -134,6 +137,40 @@ class State:
         self.chat(chat_id)
         with self.db:
             self.db.execute("UPDATE chats SET history='[]' WHERE chat_id=?", (chat_id,))
+            self.db.execute("DELETE FROM pending_questions WHERE chat_id=?", (chat_id,))
+
+    def pending(self, chat_id: int) -> dict | None:
+        row = self.db.execute(
+            "SELECT body FROM pending_questions WHERE chat_id=?", (chat_id,)
+        ).fetchone()
+        return json.loads(row[0]) if row else None
+
+    def set_pending(self, chat_id: int, value: dict | None):
+        with self.db:
+            if value is None:
+                self.db.execute("DELETE FROM pending_questions WHERE chat_id=?", (chat_id,))
+            else:
+                self.db.execute(
+                    "INSERT INTO pending_questions(chat_id,body) VALUES(?,?) ON CONFLICT(chat_id) DO UPDATE SET body=excluded.body",
+                    (chat_id, json.dumps(value, ensure_ascii=False)),
+                )
+
+    def latest_answer(self, chat_id: int) -> Answer | None:
+        rows = self.db.execute(
+            "SELECT result FROM jobs WHERE chat_id=? AND result IS NOT NULL AND status='sent' ORDER BY received DESC, update_id DESC LIMIT 20",
+            (chat_id,),
+        ).fetchall()
+        for row in rows:
+            payload = json.loads(row[0])
+            if payload.get("source_csv"):
+                return None
+            if payload.get("answer"):
+                return (
+                    Answer.model_validate(payload["answer"])
+                    if payload["answer"].get("outcome") == "answer"
+                    else None
+                )
+        return None
 
     def answer_for(self, job_id: str, chat_id: int) -> Answer | None:
         row = self.db.execute(

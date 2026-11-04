@@ -95,7 +95,7 @@ async def test_page_callbacks_use_owners_full_result_without_model(tmp_path, sam
     assert result["source_job_id"] == owner["id"]
     await service.deliver(job, result)
     buttons = service.bot.messages[-1]["reply_markup"].inline_keyboard
-    assert buttons[1][0].callback_data == "page:" + owner["id"] + ":0"
+    assert buttons[0][0].callback_data == "page:" + owner["id"] + ":0"
     forbidden = await service.prepare({"chat_id": 11, "payload": json.dumps(payload)})
     assert "answer" not in forbidden
     service.state.close()
@@ -145,7 +145,7 @@ async def test_large_list_automatically_attaches_all_result_rows(tmp_path, sampl
     assert len(preview["rows"]) == 20
     assert (
         service.bot.messages[-1]["reply_markup"]
-        .inline_keyboard[1][0]
+        .inline_keyboard[0][0]
         .callback_data.startswith("page:")
     )
     service.state.close()

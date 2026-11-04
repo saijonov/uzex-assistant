@@ -28,6 +28,7 @@ from uzex.engine import Engine, guess_language
 from uzex.interface import greeting, main_keyboard, menu_action, telegram_html
 from uzex.interface import text as ui_text
 from uzex.models import Answer
+from uzex.policy import attach_csv, export_followup, file_preference, resolve_pending_reply
 from uzex.render import export_csv, render_answer, render_sources, split_text, tr
 from uzex.state import State
 
@@ -45,21 +46,7 @@ def language_keyboard():
     )
 
 
-def evidence_keyboard(
-    job_id: str, language: str, include_csv: bool = True, row_count: int = 0, page: int = 0
-):
-    buttons = [
-        InlineKeyboardButton(
-            text=tr(("Manbalar", "Источники"), language), callback_data=f"sources:{job_id}"
-        )
-    ]
-    if include_csv:
-        buttons.append(
-            InlineKeyboardButton(
-                text=tr(("CSV yuklash", "Скачать CSV"), language), callback_data=f"csv:{job_id}"
-            )
-        )
-    keyboard = [buttons]
+def pagination_keyboard(job_id: str, language: str, row_count: int, page: int = 0):
     navigation = []
     if page > 0:
         navigation.append(
@@ -75,9 +62,7 @@ def evidence_keyboard(
                 callback_data=f"page:{job_id}:{page + 1}",
             )
         )
-    if navigation:
-        keyboard.append(navigation)
-    return InlineKeyboardMarkup(inline_keyboard=keyboard)
+    return InlineKeyboardMarkup(inline_keyboard=[navigation]) if navigation else None
 
 
 def csv_caption(answer: Answer) -> str:
@@ -188,6 +173,7 @@ class Service:
         payload = json.loads(job["payload"])
         chat_id = job["chat_id"]
         chat = self.state.chat(chat_id)
+        pending = self.state.pending(chat_id)
         language = (
             chat["language"]
             if chat["language"] in {"uz", "ru"}
@@ -278,7 +264,33 @@ class Service:
         if hello:
             key, reply_language = hello
             return {"texts": [ui_text(key, reply_language)], "menu_at": 0, "ui_language": language}
-        filename = requested_source_file(text)
+        if export_followup(text) and pending is None:
+            previous = self.state.latest_answer(chat_id)
+            if previous and previous.evidence and previous.evidence.rows:
+                return {
+                    "texts": [],
+                    "csv_answer": previous.model_dump(mode="json"),
+                    "caption": csv_caption(previous),
+                }
+            clarification = Answer(
+                outcome="clarify",
+                language=guess_language(text),
+                reason="missing_details",
+                missing_fields=["reference"],
+            )
+            rendered = render_answer(clarification)
+            self.state.set_pending(
+                chat_id,
+                {
+                    "question": text,
+                    "missing_fields": ["reference"],
+                    "delivery": "csv",
+                    "candidates": [],
+                },
+            )
+            self.state.remember(chat_id, text, rendered)
+            return {"texts": [rendered], "answer": clarification.model_dump(mode="json")}
+        filename = requested_source_file(text) if file_preference(text) != "text" else None
         if filename:
             _, count, columns = await asyncio.to_thread(source_csv, self.engine.database, filename)
             reply_language = guess_language(text)
@@ -290,7 +302,9 @@ class Service:
                 reply_language,
             )
             self.state.remember(chat_id, text, caption)
+            self.state.set_pending(chat_id, None)
             return {"texts": [], "source_csv": filename, "caption": caption}
+        pending = resolve_pending_reply(pending, text)
         remaining = self.engine.settings.answer_timeout_seconds - (time.time() - job["received"])
         if remaining <= 1:
             answer = Answer(outcome="error", language=guess_language(text))
@@ -298,7 +312,7 @@ class Service:
             typing = asyncio.create_task(self.typing(chat_id))
             try:
                 async with asyncio.timeout(remaining):
-                    answer = await self.engine.answer(text, None, chat["history"])
+                    answer = await self.engine.answer(text, None, chat["history"], pending)
             except TimeoutError:
                 answer = Answer(outcome="error", language=guess_language(text))
             finally:
@@ -307,8 +321,37 @@ class Service:
         rendered = render_answer(answer)
         if answer.outcome != "error":
             self.state.remember(chat_id, text, rendered)
+            if answer.outcome == "clarify":
+                original = (
+                    pending["question"] + "\nUser clarification: " + text
+                    if pending and answer.continues_pending
+                    else text
+                )
+                self.state.set_pending(
+                    chat_id,
+                    {
+                        "question": original,
+                        "missing_fields": answer.missing_fields,
+                        "candidates": answer.candidates,
+                        "delivery": file_preference(original),
+                    },
+                )
+            else:
+                self.state.set_pending(chat_id, None)
         result = {"texts": split_text(rendered), "answer": answer.model_dump(mode="json")}
-        if answer.outcome == "answer" and answer.evidence and len(answer.evidence.rows) > 10:
+        delivery_question = (
+            pending["question"] + "\n" + text
+            if pending and answer.continues_pending and file_preference(text) == "auto"
+            else text
+        )
+        if (
+            pending
+            and answer.continues_pending
+            and pending.get("delivery") == "csv"
+            and file_preference(text) == "auto"
+        ):
+            delivery_question += " CSV formatida"
+        if attach_csv(delivery_question, answer):
             result["attach_csv"] = True
             result["caption"] = csv_caption(answer)
         return result
@@ -324,10 +367,9 @@ class Service:
                 if result.get("language_keyboard"):
                     markup = language_keyboard()
                 elif answer and answer.evidence:
-                    markup = evidence_keyboard(
+                    markup = pagination_keyboard(
                         result.get("source_job_id", job["id"]),
                         answer.language,
-                        bool(answer.evidence.rows),
                         len(answer.evidence.rows),
                         result.get("page", 0),
                     )

@@ -8,6 +8,7 @@ from sqlglot import exp
 
 from uzex.localization import localize
 from uzex.models import Answer, Evidence
+from uzex.policy import CLARIFICATION_TEXT
 from uzex.terminology import display_value
 
 LABELS = {
@@ -366,14 +367,55 @@ def render_calculation(data: Evidence, language: str) -> str:
     return f"{formula}; {precision}"
 
 
+def cancellation_note(data: Evidence, language: str) -> str | None:
+    tree = sqlglot.parse_one(data.sql, read="duckdb")
+    where = tree.args.get("where")
+    if where is None:
+        return None
+    root = where.this
+    conditions = list(root.flatten()) if isinstance(root, exp.And) else [root]
+    for condition in conditions:
+        if isinstance(condition, exp.Not) and isinstance(condition.this, exp.Column):
+            if condition.this.name == "is_cancelled":
+                return tr(
+                    ("Bekor qilingan bitimlar kiritilmagan.", "Аннулированные сделки исключены."),
+                    language,
+                )
+        if isinstance(condition, exp.EQ) and isinstance(condition.this, exp.Column):
+            if condition.this.name == "is_cancelled" and isinstance(
+                condition.expression, exp.Boolean
+            ):
+                return tr(
+                    ("Faqat bekor qilingan bitimlar.", "Только аннулированные сделки.")
+                    if condition.expression.this
+                    else (
+                        "Bekor qilingan bitimlar kiritilmagan.",
+                        "Аннулированные сделки исключены.",
+                    ),
+                    language,
+                )
+    return None
+
+
 def render_answer(answer: Answer, page: int = 0) -> str:
     lang = answer.language
     if answer.outcome == "error":
         return tr(TEXT["error"], lang)
     if answer.outcome in {"unavailable", "clarify"}:
-        lines = [tr(TEXT.get(answer.reason, TEXT["unsupported"]), lang)]
-        for item in answer.candidates:
-            lines.append(" · ".join(str(v) for k, v in item.items() if k not in {"score", "match"}))
+        lines = (
+            [tr(CLARIFICATION_TEXT[field], lang) for field in answer.missing_fields]
+            if answer.missing_fields
+            else [tr(TEXT.get(answer.reason, TEXT["unsupported"]), lang)]
+        )
+        for index, item in enumerate(answer.candidates, 1):
+            parts = [str(item["name"])] if item.get("name") else []
+            if item.get("inn"):
+                parts.append(tr(("STIR", "ИНН"), lang) + ": " + str(item["inn"]))
+            if item.get("broker_code"):
+                parts.append(str(item["broker_code"]))
+            if item.get("region_ru"):
+                parts = [localize(str(item["region_ru"]), lang)]
+            lines.append(f"{index}. " + "; ".join(parts))
         return "\n".join(lines)
     data = answer.evidence
     if data is None:
@@ -459,6 +501,9 @@ def render_answer(answer: Answer, page: int = 0) -> str:
         )
     if data.calculation:
         lines.append(tr(("Hisob", "Расчёт"), lang) + ": " + render_calculation(data, lang))
+    note = cancellation_note(data, lang)
+    if note:
+        lines.append(note)
     if data.truncated:
         lines.append(
             tr(
@@ -469,6 +514,23 @@ def render_answer(answer: Answer, page: int = 0) -> str:
                 lang,
             )
         )
+    source_names = {
+        "contracts": "contracts.csv",
+        "participants": "participants.csv",
+        "brokers": "brokers.csv",
+        "usd_rates": "usd_rates.csv",
+    }
+    if data.table == "registry":
+        if data.selected_record_count == 1 and data.samples:
+            sample = data.samples[0]
+            source = str(sample["source_file"]) + tr(
+                (f", {sample['source_row']}-qator", f", строка {sample['source_row']}"), lang
+            )
+        else:
+            source = tr(("birja bitimlari reyestri", "реестр биржевых сделок"), lang)
+    else:
+        source = source_names.get(data.table, data.table)
+    lines.append(tr(("Manba", "Источник"), lang) + ": " + source)
     return "\n".join(lines).strip()
 
 

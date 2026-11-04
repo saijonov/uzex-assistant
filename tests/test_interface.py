@@ -186,7 +186,7 @@ def test_export_neutralizes_formulas(sample_database):
     assert "'=IMPORTDATA(1)" in export_csv(data).decode("utf-8-sig")
 
 
-async def test_empty_result_keeps_sources_without_empty_csv(tmp_path, sample_database):
+async def test_empty_result_has_no_buttons_or_empty_csv(tmp_path, sample_database):
     client = ScriptedClient(
         [
             (
@@ -201,9 +201,8 @@ async def test_empty_result_keeps_sources_without_empty_csv(tmp_path, sample_dat
     job = service.state.claim()
     result = await service.prepare(job)
     await service.deliver(job, result)
-    buttons = service.bot.messages[-1]["reply_markup"].inline_keyboard[0]
-    assert len(buttons) == 1
-    assert buttons[0].callback_data.startswith("sources:")
+    assert service.bot.messages[-1]["reply_markup"] is None
+    assert service.bot.documents == []
     service.state.close()
 
 

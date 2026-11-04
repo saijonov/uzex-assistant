@@ -16,6 +16,53 @@ class Query(StrictModel):
     sql: str = Field(min_length=1, max_length=8000)
 
 
+MissingField = Literal[
+    "entity",
+    "product",
+    "period",
+    "metric",
+    "unit",
+    "currency",
+    "role",
+    "region",
+    "reference",
+    "comparison",
+    "ranking",
+    "delivery",
+]
+
+
+class RequestReview(StrictModel):
+    language: Literal["uz", "ru"]
+    task: Literal[
+        "detail",
+        "count",
+        "turnover",
+        "price",
+        "volume",
+        "rank",
+        "compare",
+        "list",
+        "deadline",
+        "rate",
+        "unsupported",
+        "unknown",
+    ]
+    subject: Literal["deal", "contract", "company", "broker", "product", "market", "unknown"]
+    reference: Literal["specified", "context", "not_needed", "missing"]
+    entity_text: str | None
+    period: Literal["specified", "context", "all_available", "not_needed", "missing"]
+    ranking_by: Literal["count", "amount", "volume", "not_needed", "missing"]
+    missing_fields: list[MissingField]
+    continuation: bool
+
+
+class AskClarification(StrictModel):
+    language: Literal["uz", "ru"]
+    fields: list[MissingField] = Field(min_length=1, max_length=3)
+    candidates_query_id: str | None
+
+
 class Calculation(StrictModel):
     query_id: str
     numerator: str
@@ -69,3 +116,5 @@ class Answer(BaseModel):
     candidates: list[dict] = Field(default_factory=list)
     elapsed_seconds: float = 0
     request_id: str = ""
+    missing_fields: list[MissingField] = Field(default_factory=list)
+    continues_pending: bool = False

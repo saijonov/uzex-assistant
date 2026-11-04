@@ -72,9 +72,8 @@ async def test_telegram_replies_from_verified_answer(tmp_path, sample_database):
     assert bot.messages[0]["chat_id"] == 50
     assert bot.actions == [(50, "typing")]
     assert "RUKUSHO‘ FERMER MCHJ" in bot.messages[0]["text"]
-    assert (
-        bot.messages[0]["reply_markup"].inline_keyboard[0][0].callback_data.startswith("sources:")
-    )
+    assert bot.messages[0]["reply_markup"] is None
+    assert "Источник:" in bot.messages[0]["text"]
     assert state.claim() is None
     assert state.answer_for(job["id"], 51) is None
     assert state.answer_for(job["id"], 50).outcome == "answer"
