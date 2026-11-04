@@ -7,7 +7,6 @@ from pathlib import Path
 
 import duckdb
 
-
 CONTRACT_FIELDS = {
     "Номер контракта": "contract_id",
     "Наименование продукта": "product",
@@ -78,52 +77,91 @@ def import_archive(archive: Path, destination: Path) -> dict:
                 member = f"uzex_spot_data/{name}.csv"
                 Path(folder, f"{name}.csv").write_bytes(zipped.read(member))
             with duckdb.connect(str(temporary_db)) as db:
+
                 def load(name: str, table: str, fields: list[str], append: bool = False):
                     db.execute(
                         "CREATE OR REPLACE TEMP TABLE raw AS "
                         "SELECT * FROM read_csv(?, all_varchar=true)",
                         [str(Path(folder, f"{name}.csv"))],
                     )
-                    fields = [*fields, f"'{name}.csv' AS source_file", "row_number() OVER () + 1 AS source_row"]
+                    fields = [
+                        *fields,
+                        f"'{name}.csv' AS source_file",
+                        "row_number() OVER () + 1 AS source_row",
+                    ]
                     prefix = f"INSERT INTO {table}" if append else f"CREATE TABLE {table} AS"
                     db.execute(f"{prefix} SELECT {', '.join(fields)} FROM raw")
 
-                load("contracts", "contracts", [
-                    *text_fields(CONTRACT_FIELDS),
-                    number("Лот", "lot_size"),
-                    number("Базисная цена", "base_price", "24,2"),
-                    number("Сумма залога", "deposit_percent", "8,3"),
-                    'CAST("Срок оплаты" AS INTEGER) AS payment_days',
-                    'CAST("Срок поставки" AS INTEGER) AS delivery_days',
-                    date_field("Дата регистрации", "registered_on"),
-                    date_field("Действует до", "valid_until"),
-                ])
-                load("participants", "participants", text_fields({
-                    "ИНН": "inn", "Наименование": "name", "Регион": "region",
-                    "Вид деятельности": "activity", "Роль": "role", "Плательщик НДС": "vat_payer",
-                }))
-                load("brokers", "brokers", text_fields({
-                    "Код брокера": "broker_code", "Наименование": "name",
-                    "ИНН": "inn", "Регион": "region",
-                }))
-                load("usd_rates", "usd_rates", [
-                    date_field("Дата", "rate_date"), number("Курс", "usd_uzs", "12,2"),
-                ])
-                for year in range(2022, 2027):
-                    load(f"deals_{year}", "deals", [
-                        *text_fields(DEAL_FIELDS),
-                        date_field("Дата сделки", "deal_date"),
-                        date_field("Дата оплаты", "paid_on"),
-                        date_field("Дата поставки", "delivered_on"),
-                        number("Количество", "quantity_lots"),
+                load(
+                    "contracts",
+                    "contracts",
+                    [
+                        *text_fields(CONTRACT_FIELDS),
                         number("Лот", "lot_size"),
-                        number("Сумма сделки", "amount", "24,2"),
-                        number("Стартовая цена", "starting_price", "24,2"),
-                        number("Поставлено", "delivered_lots"),
-                    ], append=year != 2022)
+                        number("Базисная цена", "base_price", "24,2"),
+                        number("Сумма залога", "deposit_percent", "8,3"),
+                        'CAST("Срок оплаты" AS INTEGER) AS payment_days',
+                        'CAST("Срок поставки" AS INTEGER) AS delivery_days',
+                        date_field("Дата регистрации", "registered_on"),
+                        date_field("Действует до", "valid_until"),
+                    ],
+                )
+                load(
+                    "participants",
+                    "participants",
+                    text_fields(
+                        {
+                            "ИНН": "inn",
+                            "Наименование": "name",
+                            "Регион": "region",
+                            "Вид деятельности": "activity",
+                            "Роль": "role",
+                            "Плательщик НДС": "vat_payer",
+                        }
+                    ),
+                )
+                load(
+                    "brokers",
+                    "brokers",
+                    text_fields(
+                        {
+                            "Код брокера": "broker_code",
+                            "Наименование": "name",
+                            "ИНН": "inn",
+                            "Регион": "region",
+                        }
+                    ),
+                )
+                load(
+                    "usd_rates",
+                    "usd_rates",
+                    [
+                        date_field("Дата", "rate_date"),
+                        number("Курс", "usd_uzs", "12,2"),
+                    ],
+                )
+                for year in range(2022, 2027):
+                    load(
+                        f"deals_{year}",
+                        "deals",
+                        [
+                            *text_fields(DEAL_FIELDS),
+                            date_field("Дата сделки", "deal_date"),
+                            date_field("Дата оплаты", "paid_on"),
+                            date_field("Дата поставки", "delivered_on"),
+                            number("Количество", "quantity_lots"),
+                            number("Лот", "lot_size"),
+                            number("Сумма сделки", "amount", "24,2"),
+                            number("Стартовая цена", "starting_price", "24,2"),
+                            number("Поставлено", "delivered_lots"),
+                        ],
+                        append=year != 2022,
+                    )
                 for table, key in [
-                    ("deals", "deal_id"), ("contracts", "contract_id"),
-                    ("participants", "inn"), ("brokers", "broker_code"),
+                    ("deals", "deal_id"),
+                    ("contracts", "contract_id"),
+                    ("participants", "inn"),
+                    ("brokers", "broker_code"),
                     ("usd_rates", "rate_date"),
                 ]:
                     duplicates = db.execute(
@@ -174,10 +212,14 @@ def import_archive(archive: Path, destination: Path) -> dict:
                     raise ValueError(f"Invalid rows or broken references: {invalid}")
                 manifest = {
                     "archive_sha256": sha,
-                    "counts": {name: db.execute(f"SELECT count(*) FROM {name}").fetchone()[0]
-                               for name in ["deals", "contracts", "participants", "brokers", "usd_rates"]},
+                    "counts": {
+                        name: db.execute(f"SELECT count(*) FROM {name}").fetchone()[0]
+                        for name in ["deals", "contracts", "participants", "brokers", "usd_rates"]
+                    },
                     "first_date": str(db.execute("SELECT min(deal_date) FROM deals").fetchone()[0]),
-                    "snapshot_date": str(db.execute("SELECT max(deal_date) FROM deals").fetchone()[0]),
+                    "snapshot_date": str(
+                        db.execute("SELECT max(deal_date) FROM deals").fetchone()[0]
+                    ),
                     "fictional": True,
                 }
                 db.execute("CREATE TABLE metadata (manifest VARCHAR)")
