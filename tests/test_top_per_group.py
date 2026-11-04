@@ -64,3 +64,12 @@ def test_random_samples_cannot_use_a_window(sample_database):
         sample_database.sample(
             "SELECT deal_id FROM registry QUALIFY RANK() OVER (ORDER BY deal_id) = 1", 2, "q1"
         )
+
+
+def test_a_tied_list_reports_how_many_records_it_holds(sample_database):
+    data = sample_database.query(
+        "SELECT contract_id, deposit_percent FROM contracts "
+        "QUALIFY RANK() OVER (ORDER BY deposit_percent DESC) = 1",
+        "q1",
+    )
+    assert data.matched_count == len(data.rows)

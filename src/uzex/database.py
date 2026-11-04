@@ -907,7 +907,9 @@ class Database:
                     sql=sql,
                     table=table,
                     rows=rows[:row_limit],
-                    matched_count=count,
+                    matched_count=len(rows[:row_limit])
+                    if tree.args.get("qualify") and not tree.args.get("group")
+                    else count,
                     samples=samples,
                     period_start=serial(start),
                     period_end=serial(end),
