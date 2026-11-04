@@ -748,6 +748,15 @@ def calculate_ratio(
 ) -> Evidence:
     if not evidence.rows or not 0 <= scale <= 6:
         raise ValueError("A nonempty query and scale between 0 and 6 are required")
+    measures = evidence.expressions
+    if operation != "share_percent" and measures.get(numerator, numerator) == measures.get(
+        denominator, denominator
+    ):
+        raise ValueError(
+            "Numerator and denominator are the same measure, so the result means nothing. "
+            "Select two different measures, for example COUNT(*) FILTER (WHERE ...) and COUNT(*), "
+            "or one column per period."
+        )
     total = None
     if operation == "share_percent":
         if evidence.capped:
