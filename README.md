@@ -4,6 +4,8 @@ A Telegram assistant from team 21 for the UZEX qualifying challenge. It answers 
 
 Bot: https://t.me/uzex21_bot
 
+Start with `/start` to choose a menu language, or ask a question immediately. The bottom menu has examples, help, language selection and a new conversation. Answers follow the question language, including an explicit request for Uzbek or Russian. Sources shows the evidence; CSV downloads the columns returned for that answer.
+
 ## Local setup
 
 Install Python 3.12 and uv, then run:
@@ -71,6 +73,7 @@ Stop the local macOS instance before starting the server instance. Keep credenti
 
 - [Architecture and calculation rules](docs/architecture.md)
 - [Verification results and limits](docs/verification.md)
+- [Interface and qualifying-rule review](docs/interface-review.md)
 - [Submission description and checklist](docs/submission.md)
 
 All companies, tax IDs, rates and amounts are fictional. The deals cover 3 January 2022 through 30 October 2026. Exchange rates separately cover 1 January 2022 through 31 October 2026. No live market predictions are provided.

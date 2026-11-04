@@ -10,7 +10,7 @@ Imported 500,000 deals, 6,616 contracts, 14,392 participants, 120 brokers and 1,
 
 ## Automated checks
 
-51 offline tests passed. They cover monetary values and lot calculations, date-specific conversion, blank delivery data, compound filters, region aliases, mixed currencies and units, forbidden SQL, strict tools, fabricated evidence IDs, false no-match claims, service failures, concurrent requests, Telegram splitting, update deduplication, restart recovery, chat ordering, ownership checks and command/reply handlers.
+71 offline tests passed. They cover monetary values and lot calculations, date-specific conversion, blank delivery data, compound filters, region aliases, mixed currencies and units, forbidden SQL, strict tools, fabricated evidence IDs, false no-match claims, service failures, concurrent requests, Telegram splitting, update deduplication, restart recovery, chat ordering, ownership checks and command/reply handlers.
 
 Lint and format checks passed. CI repeats offline checks on every push and builds the Python package without credentials or the full private dataset.
 
@@ -42,3 +42,7 @@ The Docker image built successfully. A non-root container with a read-only datas
 - Keep the computer awake and online or move to an always-on server.
 - Confirm the submission form, team contact details and post-submission-change rule with the organizers.
 - Continue reviewing ambiguous questions and traces; zero observed fabrication is not proof that the model can never misinterpret a request.
+
+## Menu and copy review
+
+See [the interface review](interface-review.md) for optional onboarding, language behavior, CSV scope, rule assessment and the repeated 132-question evaluation. Four additional live requests verified that menu language does not force answer language, including explicit requests to switch the answer language.

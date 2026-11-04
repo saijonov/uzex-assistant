@@ -32,7 +32,7 @@ One long-polling process receives private messages and callbacks. Each update is
 
 Telegram has no general idempotency key for sendMessage. A crash after Telegram accepts a message but before the local sent marker is saved can cause a repeated reply. Incoming updates and normal retries are deduplicated; absolute exactly-once external delivery is not claimed.
 
-Language preference and conversation history are separate for each chat. `/reset` clears conversation memory; operational job records remain local. Local files containing questions and results are ignored by Git. Logs contain request identifiers, timings, outcomes and sanitized errors; credentials are never logged. CSV export neutralizes spreadsheet formula prefixes.
+Menu language and conversation history are separate for each chat. The menu preference does not force answer language: answers follow the current question or its explicit Uzbek/Russian language request. First-start language selection is optional. A persistent keyboard provides examples, help, language selection and conversation reset. Messages use escaped Telegram HTML for bold labels. `/reset` clears conversation memory; operational job records remain local. Local files containing questions and results are ignored by Git. Logs contain request identifiers, timings, outcomes and sanitized errors; credentials are never logged. CSV export neutralizes spreadsheet formula prefixes.
 
 The macOS LaunchAgent restarts the local process. Docker provides the same runtime for a Linux server. A local process lock prevents two instances sharing the same state directory. Health checks read the database and polling heartbeat without modifying job state.
 

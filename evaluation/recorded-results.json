@@ -32,5 +32,64 @@
     "queries": 118,
     "result_changes": 0
   },
-  "note": "Finite development evaluations, not a guarantee about unseen judging questions. Raw traces remain local and ignored by Git."
+  "note": "Finite development evaluations, not a guarantee about unseen judging questions. Raw traces remain local and ignored by Git.",
+  "interface_review": {
+    "main": {
+      "run_at_unix": 1793800662.561547,
+      "model": "gpt-6.1-sol",
+      "total": 100,
+      "passed": 100,
+      "answerable": 92,
+      "answerable_passed": 92,
+      "safety": 8,
+      "safety_passed": 8,
+      "p95_seconds": 26.035,
+      "max_seconds": 27.5,
+      "failures": []
+    },
+    "challenge": {
+      "run_at_unix": 1793800685.608491,
+      "model": "gpt-6.1-sol",
+      "total": 32,
+      "passed": 32,
+      "answerable": 20,
+      "answerable_passed": 20,
+      "safety": 12,
+      "safety_passed": 12,
+      "p95_seconds": 12.189,
+      "max_seconds": 12.969,
+      "failures": []
+    },
+    "language_checks": [
+      {
+        "menu_language": "uz",
+        "question": "Кто продавец по сделке 100001?",
+        "answer_language": "ru",
+        "passed": true,
+        "seconds": 5.352
+      },
+      {
+        "menu_language": "ru",
+        "question": "100001-bitimning sotuvchisi kim?",
+        "answer_language": "uz",
+        "passed": true,
+        "seconds": 5.124
+      },
+      {
+        "menu_language": "ru",
+        "question": "Rus tilida javob bering: 100001-bitimning sotuvchisi kim?",
+        "answer_language": "ru",
+        "passed": true,
+        "seconds": 5.614
+      },
+      {
+        "menu_language": "uz",
+        "question": "Ответь на узбекском: кто продавец по сделке 100001?",
+        "answer_language": "uz",
+        "passed": true,
+        "seconds": 5.665
+      }
+    ],
+    "offline_tests": 71
+  }
 }
