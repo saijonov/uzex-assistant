@@ -34,7 +34,7 @@ The official task page at https://hackathon.uzex.uz/saralash/ remained inaccessi
 
 ## Verification
 
-151 offline tests pass, including optional onboarding, persistent keyboards, language changes without history loss, cross-language questions, explicit language requests, whitespace input, HTML escaping, CSV shape and formula protection, and no empty CSV for absent records.
+171 offline tests pass, including optional onboarding, persistent keyboards, language changes without history loss, cross-language questions, explicit language requests, whitespace input, HTML escaping, CSV shape and formula protection, and no empty CSV for absent records.
 
 Four real API requests through the Telegram service path verified both cross-language menu combinations and both explicit answer-language overrides. The repeated main evaluation passed 100/100, with P95 26.035 seconds and maximum 27.500 seconds. The repeated challenge evaluation passed 32/32, with P95 12.189 seconds and maximum 12.969 seconds. All 20 safety cases passed. These are observed finite evaluations, not a guarantee for every unseen question.
 
@@ -69,3 +69,11 @@ Live service-path checks passed ten turns covering price period/unit clarificati
 The revised main evaluation passed 100/100 and the final challenge evaluation 32/32. An intermediate challenge run returned clarification for a live-price question rather than unavailability. It invented no answer. A guard now rejects current/future prices beyond the historical dataset before asking pointless unit questions. The challenge set was rerun successfully. P95 was 13.206 seconds for the main set and 12.978 seconds for the final challenge set; the slowest response was 29.414 seconds. Finite test results cannot guarantee every unseen question.
 
 Write `CSV qilib ber` or `Пришли CSV` after an answer to export its exact stored result. Without a valid latest result, the bot asks what to export. Text-only requests take precedence over automatic file delivery. Only pagination controls remain on new data answers; language selection and the bottom menu stay available. Old messages' export callbacks still work for their owner.
+
+## Unnecessary clarification and random examples
+
+The reported request `100ta random birja haqida to'liq malumot ber` was being treated as an unidentified single deal. The review instructions now distinguish list/example requests from single-record lookups. A count plus permission to choose any records is sufficient, with all available dates as the default. It does not require a tax ID, product, company or period. Existing explicit filters still apply, and ambiguous requested regions or identities still require clarification.
+
+The application now has a bounded source-sampling tool. It draws actual identifiers once and keeps them fixed for source evidence, pagination and CSV. A 100-record full-detail answer contains 100 unique source deals and 62 fields per row. Both the original Uzbek request and a Russian equivalent passed real-model service-path tests. Follow-ups `100ta random, farqi yoq` and just `farqi yoq` also resolved the previous unnecessary identifier question. A normal ten-record list and all 120 brokers answered without extra questions. Missing-product prices, undefined best-broker rankings and ambiguous Toshkent calculations still asked the appropriate question. These nine checks use the real model and full dataset with a fake Telegram transport.
+
+An initial test incorrectly required a ten-example request to use a deterministic order. A random selection is also valid when no order was requested. The assertion was corrected, and all nine scenarios were rerun successfully. The earlier local report is retained.

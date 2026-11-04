@@ -311,5 +311,161 @@
       "local_service_restarted": true,
       "health_check": "healthy"
     }
+  },
+  "example_sampling_review": {
+    "offline_tests": 171,
+    "main": {
+      "run_at_unix": 1793805090.0401,
+      "model": "gpt-6.1-sol",
+      "total": 100,
+      "passed": 100,
+      "answerable": 92,
+      "answerable_passed": 92,
+      "safety": 8,
+      "safety_passed": 8,
+      "p95_seconds": 11.145,
+      "max_seconds": 17.1,
+      "failures": []
+    },
+    "challenge": {
+      "run_at_unix": 1793804927.911853,
+      "model": "gpt-6.1-sol",
+      "total": 32,
+      "passed": 32,
+      "answerable": 20,
+      "answerable_passed": 20,
+      "safety": 12,
+      "safety_passed": 12,
+      "p95_seconds": 13.111,
+      "max_seconds": 17.065,
+      "failures": []
+    },
+    "service_path_checks": [
+      {
+        "question": "100ta random birja haqida to'liq malumot ber",
+        "outcome": "answer",
+        "rows": 100,
+        "columns": 62,
+        "selection": "random",
+        "csv": true,
+        "seconds": 7.302,
+        "missing_fields": [],
+        "passed": true
+      },
+      {
+        "question": "Barcha brokerlarni ko‘rsat",
+        "outcome": "answer",
+        "rows": 120,
+        "columns": 6,
+        "selection": "query",
+        "csv": true,
+        "seconds": 7.35,
+        "missing_fields": [],
+        "passed": true
+      },
+      {
+        "question": "100 случайных сделок со всей информацией",
+        "outcome": "answer",
+        "rows": 100,
+        "columns": 62,
+        "selection": "random",
+        "csv": true,
+        "seconds": 7.451,
+        "missing_fields": [],
+        "passed": true
+      },
+      {
+        "question": "10 ta bitimni ko‘rsat",
+        "outcome": "answer",
+        "rows": 10,
+        "columns": 62,
+        "selection": "random",
+        "csv": false,
+        "seconds": 7.812,
+        "missing_fields": [],
+        "passed": true
+      },
+      {
+        "question": "Narx qancha?",
+        "outcome": "clarify",
+        "rows": 0,
+        "columns": 0,
+        "selection": null,
+        "csv": false,
+        "seconds": 9.011,
+        "missing_fields": [
+          "product"
+        ],
+        "passed": true
+      },
+      {
+        "question": "Eng yaxshi broker kim?",
+        "outcome": "clarify",
+        "rows": 0,
+        "columns": 0,
+        "selection": null,
+        "csv": false,
+        "seconds": 9.612,
+        "missing_fields": [
+          "ranking"
+        ],
+        "passed": true
+      },
+      {
+        "question": "2025-yilda Toshkentda savdo aylanmasi qancha?",
+        "outcome": "clarify",
+        "rows": 0,
+        "columns": 0,
+        "selection": null,
+        "csv": false,
+        "seconds": 10.132,
+        "missing_fields": [
+          "region"
+        ],
+        "passed": true
+      },
+      {
+        "question": "100ta random, farqi yoq",
+        "outcome": "answer",
+        "rows": 100,
+        "columns": 62,
+        "selection": "random",
+        "csv": true,
+        "seconds": 14.1,
+        "missing_fields": [],
+        "passed": true
+      },
+      {
+        "question": "farqi yoq",
+        "outcome": "answer",
+        "rows": 100,
+        "columns": 62,
+        "selection": "random",
+        "csv": true,
+        "seconds": 16.023,
+        "missing_fields": [],
+        "passed": true
+      }
+    ],
+    "test_expectation_correction": "Initial ten-example check incorrectly required deterministic selection despite no user ordering requirement. Corrected expectation and reran all nine scenarios successfully.",
+    "frozen_sample_provenance_and_csv": "Covered by source-data and replay regression tests.",
+    "full_data_format_smoke": {
+      "rows": 100,
+      "columns": 62,
+      "first_page_messages": 5,
+      "largest_message_characters": 3490,
+      "csv_bytes": 101993,
+      "sample_ids_in_result": true,
+      "new_buttons": [
+        "Next page"
+      ]
+    },
+    "deployment": {
+      "docker_build": "passed",
+      "package_build": "passed",
+      "local_service_restarted": true,
+      "health_check": "healthy"
+    },
+    "transport_note": "Real model and full dataset with fake Telegram transport. No new independent-account acceptance test claimed."
   }
 }

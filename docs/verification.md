@@ -10,7 +10,7 @@ Imported 500,000 deals, 6,616 contracts, 14,392 participants, 120 brokers and 1,
 
 ## Automated checks
 
-151 offline tests passed. They cover monetary values and lot calculations, date-specific conversion, blank delivery data, compound filters, region aliases, mixed currencies and units, forbidden SQL, strict tools, fabricated evidence IDs, false no-match claims, service failures, concurrent requests, Telegram splitting, update deduplication, restart recovery, chat ordering, ownership checks and command/reply handlers.
+171 offline tests passed. They cover monetary values and lot calculations, date-specific conversion, blank delivery data, compound filters, region aliases, mixed currencies and units, forbidden SQL, strict tools, fabricated evidence IDs, false no-match claims, service failures, concurrent requests, Telegram splitting, update deduplication, restart recovery, chat ordering, ownership checks and command/reply handlers.
 
 Lint and format checks passed. CI repeats offline checks on every push and builds the Python package without credentials or the full private dataset.
 
@@ -54,3 +54,11 @@ After introducing required request review and persistent clarification state, th
 Ten real-model service-path turns passed checks for period/unit follow-ups, isolated chat state, replacing a pending question, small explicit CSV, text-only large lists and CSV intent carried through clarification. A separate two-turn city/region clarification passed. Unit/transport tests also cover forced first-tool order, query bypass rejection, invented references, unresolved identity blocking, verified numbered choices, restart persistence, reset, export of stale/unavailable results, cancellation notes and removal of new export/source buttons. These service-path checks use a fake transport; they do not claim a new independent Telegram-account acceptance test after the button removal.
 
 The updated wheel and source package built successfully. The rebuilt non-root Docker image answered the missing-product prompt through the real API with the expected clarification. The macOS service was restarted with the new code and its database and polling health check passed.
+
+## Example requests and random selection
+
+171 offline tests passed after adding random sampling and list-clarification regressions. The 20 added checks cover frozen identifiers and provenance, exact CSV rows, source filters and field selection, smaller/empty populations, every approved relation, bounded sizes, blocked SQL, unneeded identity/date questions and recovery from a previous unnecessary clarification.
+
+Nine real-model service-path scenarios passed. The exact reported Uzbek request returned 100 deals and 62 fields per record; its Russian equivalent also returned 100 complete records. Both `100ta random, farqi yoq` and `farqi yoq` resolved a pending identifier question. An ordinary ten-record list and all 120 brokers needed no clarification. Missing product, ranking metric and city/region cases continued to clarify. These tests used a fake Telegram transport, not a new independent Telegram-account acceptance test.
+
+The complete main set passed 100/100 (P95 11.145 seconds, maximum 17.100 seconds). The separate challenge set passed 32/32 (P95 13.111 seconds, maximum 17.065 seconds). All 20 safety/absence cases passed. The package and updated Docker image built successfully. The local service was restarted and its health check passed. A full-data formatting smoke check kept all 100 source rows and 62 columns in CSV; the first ten full cards were split into five messages with only a next-page control. These are finite development results, not a guarantee for every future question.
