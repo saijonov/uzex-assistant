@@ -402,6 +402,7 @@ def validate_select(tree: exp.Select) -> str:
         "limit",
         "offset",
         "distinct",
+        "qualify",
     }
     if any(value and key not in allowed_clauses for key, value in tree.args.items()):
         raise ValueError("Unsupported SELECT clause; use WHERE filters and ordinary grouping")
@@ -424,8 +425,18 @@ def validate_select(tree: exp.Select) -> str:
         if any(value and key not in {"this", "alias"} for key, value in table.args.items()):
             raise ValueError("Table transformations and sampling are forbidden")
     table = source.this
-    if tree.find(exp.Window):
-        raise ValueError("Window functions are unsupported")
+    qualify = tree.args.get("qualify")
+    for window in tree.find_all(exp.Window):
+        if (
+            qualify is None
+            or window.find_ancestor(exp.Qualify) is not qualify
+            or not isinstance(window.this, (exp.Rank, exp.DenseRank))
+            or not window.args.get("order")
+        ):
+            raise ValueError(
+                "Windows are only allowed as QUALIFY RANK() OVER ([PARTITION BY ...] ORDER BY ...) = 1, "
+                "which keeps every tied row"
+            )
     if tree.args.get("offset") and not (tree.args.get("limit") and tree.args.get("order")):
         raise ValueError("OFFSET needs both ORDER BY and LIMIT")
     for node in tree.walk():
@@ -676,7 +687,7 @@ class Database:
         if not 1 <= count <= 100:
             raise ValueError("Sample size must be between 1 and 100")
         if tree.find(exp.AggFunc) or any(
-            tree.args.get(clause) for clause in ("group", "distinct", "order", "limit")
+            tree.args.get(clause) for clause in ("group", "distinct", "order", "limit", "qualify")
         ):
             raise ValueError(
                 "Sampling needs source fields and optional WHERE, without aggregates, ordering or limits"
@@ -746,7 +757,7 @@ class Database:
                     expressions[columns[index]] = expression.sql(dialect="duckdb")
                 selection_tree = inner if inner is not None else tree
                 scope = selection_tree.copy()
-                for key in ("group", "having", "order", "limit", "offset", "distinct"):
+                for key in ("group", "having", "order", "limit", "offset", "distinct", "qualify"):
                     scope.set(key, None)
                 if table in DEAL_TABLES:
                     records = "count(DISTINCT deal_id)" if table == "broker_deals" else "count(*)"
@@ -791,10 +802,9 @@ class Database:
                         )
                     ordered = {
                         column.name
-                        for item in (
-                            tree.args["order"].expressions if tree.args.get("order") else []
-                        )
-                        for column in item.find_all(exp.Column)
+                        for clause in (tree.args.get("order"), tree.args.get("qualify"))
+                        if clause
+                        for column in clause.find_all(exp.Column)
                     }
                     if not grouped:
                         if len(currencies or []) > 1 and ordered & CURRENCY_COLUMNS:
