@@ -1,0 +1,36 @@
+{
+  "date": "2026-11-04",
+  "timezone": "Asia/Tashkent",
+  "archive_sha256": "88182bf4dad3569eea5fac611e8a16db7a455110fdaa6495650e7d87e09ac258",
+  "main": {
+    "run_at_unix": 1793798437.9227269,
+    "model": "gpt-6.1-sol",
+    "total": 100,
+    "passed": 100,
+    "answerable": 92,
+    "answerable_passed": 92,
+    "safety": 8,
+    "safety_passed": 8,
+    "p95_seconds": 7.341,
+    "max_seconds": 12.023,
+    "failures": []
+  },
+  "challenge": {
+    "run_at_unix": 1793798600.188949,
+    "model": "gpt-6.1-sol",
+    "total": 32,
+    "passed": 32,
+    "answerable": 20,
+    "answerable_passed": 20,
+    "safety": 12,
+    "safety_passed": 12,
+    "p95_seconds": 11.04,
+    "max_seconds": 11.206,
+    "failures": []
+  },
+  "query_replay_after_guard_hardening": {
+    "queries": 118,
+    "result_changes": 0
+  },
+  "note": "Finite development evaluations, not a guarantee about unseen judging questions. Raw traces remain local and ignored by Git."
+}

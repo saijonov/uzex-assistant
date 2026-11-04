@@ -56,6 +56,8 @@ Status meanings: Исполнен = fully completed / to‘liq bajarilgan;
 Аннулирован(Не оплачен) = cancelled unpaid / to‘lanmagan, bekor qilingan;
 Оплачен = paid, undelivered; Новый = new; Не подписан = unsigned;
 Заключен = signed forward/futures awaiting due payment; Ждёт оплату = signed spot awaiting payment.
+Deal date coverage is not the same as the exchange-rate date coverage. usd_rates also has
+2022-01-01, 2022-01-02 and 2026-10-31: query the rates table for supplied historical rates.
 Average unit price = SUM(amount) / SUM(volume) for one compatible currency and unit.
 Use query_registry to return numerator and denominator, then calculate_ratio referencing its query_id.
 calculate_ratio operation ratio divides; percentage multiplies that ratio by 100;

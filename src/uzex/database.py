@@ -126,6 +126,9 @@ def validate_query(sql: str) -> tuple[exp.Select, str]:
     if len(statements) != 1 or not isinstance(statements[0], exp.Select):
         raise ValueError("Exactly one SELECT is allowed")
     tree = statements[0]
+    allowed_clauses = {"expressions", "from_", "where", "group", "order", "limit", "distinct"}
+    if any(value and key not in allowed_clauses for key, value in tree.args.items()):
+        raise ValueError("Unsupported SELECT clause; use WHERE filters and ordinary grouping")
     if tree.args.get("with_") or tree.args.get("joins") or tree.args.get("into"):
         raise ValueError("Use one approved view without joins, CTEs or INTO")
     if tree.args.get("having"):
@@ -138,10 +141,12 @@ def validate_query(sql: str) -> tuple[exp.Select, str]:
     table = tables[0]
     if not isinstance(table.this, exp.Identifier) or table.db or table.catalog:
         raise ValueError("External and qualified sources are forbidden")
+    if any(value and key not in {"this", "alias"} for key, value in table.args.items()):
+        raise ValueError("Table transformations and sampling are forbidden")
     if tree.args.get("offset") or tree.find(exp.Window):
         raise ValueError("Offsets and window functions are unsupported")
     for node in tree.walk():
-        if isinstance(node, (exp.Div, exp.IntDiv, exp.Mod, exp.Pow)):
+        if isinstance(node, (exp.Div, exp.IntDiv, exp.Mod, exp.Pow, exp.Add, exp.Sub, exp.Mul)):
             raise ValueError("Use calculate_ratio for division; other arithmetic is unsupported")
         if isinstance(node, exp.Func):
             name = node.name.upper() if isinstance(node, exp.Anonymous) else node.sql_name()
@@ -187,6 +192,10 @@ class Database:
         self.path = path
         with self.connect() as db:
             self.manifest = json.loads(db.execute("SELECT manifest FROM metadata").fetchone()[0])
+            first_rate, last_rate = db.execute(
+                "SELECT min(rate_date), max(rate_date) FROM usd_rates"
+            ).fetchone()
+            self.manifest["usd_rates_coverage"] = [str(first_rate), str(last_rate)]
             self.schema = {
                 table: [(r[0], r[1]) for r in db.execute(f"DESCRIBE {table}").fetchall()]
                 for table in sorted(TABLES)

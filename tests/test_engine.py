@@ -97,6 +97,18 @@ async def test_service_failure_is_not_reported_as_absence(sample_database):
     assert "ma’lumot yo‘qligini anglatmaydi" in render_answer(result)
 
 
+async def test_deadline_returns_service_error_without_unchecked_content(sample_database):
+    class SlowClient(ScriptedClient):
+        async def create(self, **kwargs):
+            await asyncio.sleep(1)
+
+    settings = Settings(_env_file=None).model_copy(update={"answer_timeout_seconds": 0.01})
+    answer = await Engine(settings, SlowClient([]), sample_database).answer("Savol")
+    assert answer.outcome == "error"
+    assert answer.evidence is None
+    assert answer.elapsed_seconds < 0.5
+
+
 async def test_concurrent_answers_are_isolated(sample_database):
     async def ask(deal_id):
         client = ScriptedClient(

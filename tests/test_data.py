@@ -69,6 +69,16 @@ def test_compound_date_and_status_filters_work(sample_database):
     assert result.period_end.startswith("2025-")
 
 
+def test_percentage_is_computed_from_verified_columns(sample_database):
+    evidence = sample_database.query(
+        "SELECT COUNT(*) AS all_deals, "
+        "COUNT(*) FILTER (WHERE is_cancelled) AS cancelled FROM registry",
+        "q1",
+    )
+    answer = calculate_ratio(evidence, "cancelled", "all_deals", 2, "percentage")
+    assert answer.rows[0]["ratio"] == "18.52"
+
+
 @pytest.mark.parametrize(
     "sql",
     [
@@ -89,6 +99,10 @@ def test_compound_date_and_status_filters_work(sample_database):
         "INSTALL httpfs",
         "SELECT current_setting('secret') FROM registry",
         "SELECT SUM(99999) AS total FROM registry",
+        "SELECT SUM(amount + amount) FROM registry",
+        "SELECT * FROM registry USING SAMPLE 10 PERCENT",
+        "SELECT * FROM registry QUALIFY ROW_NUMBER() OVER () = 1",
+        "SELECT * FROM registry OFFSET 1",
     ],
 )
 def test_unsafe_queries_are_blocked(sql):
