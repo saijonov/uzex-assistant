@@ -62,3 +62,24 @@ The updated wheel and source package built successfully. The rebuilt non-root Do
 Nine real-model service-path scenarios passed. The exact reported Uzbek request returned 100 deals and 62 fields per record; its Russian equivalent also returned 100 complete records. Both `100ta random, farqi yoq` and `farqi yoq` resolved a pending identifier question. An ordinary ten-record list and all 120 brokers needed no clarification. Missing product, ranking metric and city/region cases continued to clarify. These tests used a fake Telegram transport, not a new independent Telegram-account acceptance test.
 
 The complete main set passed 100/100 (P95 11.145 seconds, maximum 17.100 seconds). The separate challenge set passed 32/32 (P95 13.111 seconds, maximum 17.065 seconds). All 20 safety/absence cases passed. The package and updated Docker image built successfully. The local service was restarted and its health check passed. A full-data formatting smoke check kept all 100 source rows and 62 columns in CSV; the first ten full cards were split into five messages with only a next-page control. These are finite development results, not a guarantee for every future question.
+
+## Audit of real conversations and fixes
+
+An audit replayed 113 natural conversations through the real service, model and full dataset, and compared results with separately calculated values. It found failures the earlier 132 cases could not detect: those cases contained no follow-ups, returned one row each, forced the answer language and used none of the query shapes that crashed.
+
+Findings fixed afterwards:
+
+| Finding | Evidence before the fix |
+|---|---|
+| `COUNT(DISTINCT ...)` crashed rendering | No reply after 69 seconds in Russian, a generic error after 82 seconds in Uzbek; also seen in the live log |
+| City or region reply could not settle Toshkent | 0 of 11 attempts succeeded |
+| Unit words such as `tonnada` and `в килограммах` were not recognised | The same question repeated |
+| An invented filter value was reported as absence | `currency='USD'` produced "no records" |
+| History was cut at 10,000 characters | A sum over 10 random deals used 6 |
+| Spellings split rankings | The top product showed 11,798 instead of 23,881 |
+| Query rules refused answerable questions | Median, groups over a threshold, buyers without deals, broker rankings |
+| File intent matched word fragments | `nomini csv qilib ber` sent no file |
+
+Offline results for the fixed code: 392 tests passed, lint and format checks passed. The 221 new tests use a scripted model or no model. A full 500,000-deal import was built with the new importer, and the audit's correct queries were run through the real query layer. Their results match values calculated separately in DuckDB and by `scripts/build_hard.py` from the raw CSVs. An older dataset still loads under the new code, and the new dataset loads under the old code.
+
+**Not yet verified with the real model.** The prompt and the new about_previous_result tool change how the model behaves, and offline tests cannot show that it will use them as intended. `evaluation/hard.json` is ready for that check, with 87 conversations, 113 turns and a 16-conversation `critical` subset. It has not been run, so no accuracy claim should be made from it yet. The earlier 132-case results also predate these changes and need rerunning, now without a forced answer language.

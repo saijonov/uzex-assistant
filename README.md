@@ -4,7 +4,7 @@ A Telegram assistant from team 21 for the UZEX qualifying challenge. It answers 
 
 Bot: https://t.me/uzex21_bot
 
-Start with `/start` to choose a menu language, or ask a question immediately. The bottom menu has examples, help, language selection and a new conversation. Answers follow the question language, including an explicit request for Uzbek or Russian. Answers include a short source reference. If a necessary detail is missing, the bot asks and remembers your reply. Example and random-list requests do not require an identifier: `100ta random birja haqida to‘liq ma’lumot ber` returns 100 source deals with full details. Lists have Previous/Next buttons. Results longer than ten rows attach a CSV; small results attach one only when requested. Ask for text only to suppress a file, or write `CSV qilib ber` / `Пришли CSV` to export the latest answer. Ask for `brokers.csv` to receive all 120 brokers with the original source columns.
+Start with `/start` to choose a menu language, or ask a question immediately. The bottom menu has examples, help, language selection and a new conversation. Answers follow the question language, including an explicit request for Uzbek or Russian. Answers include a short source reference and the filters they applied. If a necessary detail is missing, the bot asks once and remembers your reply; `farqi yo‘q` or `неважно` accepts the defaults. Follow-ups use the complete stored result, and questions about it, such as `bu to‘liq malumotmi?` or `buni qanday hisobladingiz?`, are answered in words. Example and random-list requests do not require an identifier: `100ta random birja haqida to‘liq ma’lumot ber` returns 100 source deals with full details. Lists have Previous/Next buttons. Results longer than ten rows attach a CSV; small results attach one only when requested. Ask for text only to suppress a file, or write `CSV qilib ber` / `Пришли CSV` to export the latest answer. Excel requests receive the same CSV. Ask for `brokers.csv` to receive all 120 brokers with the original source columns.
 
 ## Local setup
 
@@ -44,6 +44,17 @@ PYTHONPATH=src uv run uzex install-service
 
 Use only one polling instance for the token. The importer must not replace the dataset while the bot is running. Stop the bot before reimporting.
 
+The import builds derived fields such as merged product names, so after updating to a version that changes them, stop the bot, run `make import` and start it again:
+
+```sh
+launchctl bootout gui/$(id -u)/uzex21.assistant
+make import
+PYTHONPATH=src uv run uzex install-service
+make health
+```
+
+Do not keep `data/registry.duckdb` open in a database tool such as Beekeeper Studio while the bot runs. A writable connection locks the file and every data question fails until it closes. Inspect a copy, or connect read-only.
+
 ## Checks and evaluation
 
 ```sh
@@ -51,9 +62,13 @@ make test
 PYTHONPATH=src uv run uzex ask 'Кто продавец по сделке 100001?'
 PYTHONPATH=src uv run uzex evaluate
 PYTHONPATH=src uv run uzex evaluate --cases evaluation/challenge.json --output reports/challenge.json
+PYTHONPATH=src uv run uzex evaluate --cases evaluation/hard.json --category critical --output reports/hard-critical.json
+PYTHONPATH=src uv run uzex evaluate --cases evaluation/hard.json --output reports/hard.json
 ```
 
-Offline tests use a small sample of the supplied fictional CSVs. Full live evaluation requires the original imported dataset and funded API access. Expected values are calculated independently from CSVs by `scripts/build_evaluation.py` and `scripts/build_challenge.py`; they are not generated from model answers. Runtime reports and chat state are excluded from Git. Read [verification results](docs/verification.md) before making accuracy claims.
+`evaluation/hard.json` holds natural multi-turn conversations, run through the real service with Telegram replaced by a recorder and graded on the text and files a user receives. The `critical` category is a low-cost subset of 16 conversations covering every failure found so far. Live evaluation spends API credits.
+
+Offline tests use a small sample of the supplied fictional CSVs. Full live evaluation requires the original imported dataset and funded API access. Expected values are calculated independently from CSVs by `scripts/build_evaluation.py`, `scripts/build_challenge.py` and `scripts/build_hard.py`; they are not generated from model answers. Runtime reports and chat state are excluded from Git. Read [verification results](docs/verification.md) before making accuracy claims.
 
 ## Server deployment
 
