@@ -64,9 +64,10 @@ PYTHONPATH=src uv run uzex evaluate
 PYTHONPATH=src uv run uzex evaluate --cases evaluation/challenge.json --output reports/challenge.json
 PYTHONPATH=src uv run uzex evaluate --cases evaluation/hard.json --category critical --output reports/hard-critical.json
 PYTHONPATH=src uv run uzex evaluate --cases evaluation/hard.json --output reports/hard.json
+PYTHONPATH=src uv run uzex evaluate --cases evaluation/tricky.json --output reports/tricky.json
 ```
 
-`evaluation/hard.json` holds natural multi-turn conversations, run through the real service with Telegram replaced by a recorder and graded on the text and files a user receives. The `critical` category is a low-cost subset of 20 conversations covering the main failures found so far. Live evaluation spends API credits.
+`evaluation/hard.json` holds natural multi-turn conversations, run through the real service with Telegram replaced by a recorder and graded on the text and files a user receives. The `critical` category is a low-cost subset of 20 conversations covering the main failures found so far. `evaluation/tricky.json` holds 50 questions in both languages built to break the harness and the model. Live evaluation spends API credits.
 
 Offline tests use a small sample of the supplied fictional CSVs. Full live evaluation requires the original imported dataset and funded API access. Expected values are calculated independently from CSVs by `scripts/build_evaluation.py`, `scripts/build_challenge.py` and `scripts/build_hard.py`; they are not generated from model answers. Runtime reports and chat state are excluded from Git. Read [verification results](docs/verification.md) before making accuracy claims.
 

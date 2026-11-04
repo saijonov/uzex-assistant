@@ -109,8 +109,21 @@ The one failure was a false "name not found" for the inflected word `shakarning`
 
 An earlier production run in this round reported 0 of 48. That was a defect in the temporary test script, not in the application: a variable name clash made every request fail after its first model call.
 
-## Fixes after the 50-question review
+## Fifty tricky questions, live
 
-These changes were checked offline only, with no live model run and no real Telegram test: record numbers and amounts, wording about cancelled deals, VAT payers, all-time prices, questions about variants, casual greetings, broker totals that counted deals twice, row limits, product matching and new prompt rules.
+`evaluation/tricky.json` holds 50 questions in Uzbek and Russian, 100 in all, built to break the harness and the model. Expected values were calculated directly from the data with joins and arithmetic the bot may not use. It also holds a replay of a real chat that had gone wrong. All runs use the real service and full dataset, with Telegram replaced by a recorder.
 
-The prompt rules depend on the model following them, so they are not proven until tested live. Still open: day-name labels, subtraction and other calculator operations, chained results, sorting by a calculated value, top per group, days between dates, a converted dollar column and several results in one answer.
+| Run | Model | Passed | P95 | Slowest |
+|---|---|---:|---:|---:|
+| First run | `gpt-6.1-sol`, medium | 88/100 | 12.138 s | 17.657 s |
+| After the fixes | `gpt-6.1-sol`, medium | 100/100 | 13.441 s | 22.040 s |
+| 18 affected questions on the final code | `gpt-6.1-sol`, medium | 18/18 | 18.866 s | 18.866 s |
+| Chat replay, 8 turns | `gpt-6.1-sol`, medium | 8/8 | 12.960 s | 12.960 s |
+
+The first run found: amounts shown with four decimals, unpaid totals that dropped cancelled deals, an exact company name still asked about, a city treated as a region to clarify, a named deposit metric asked about as a ranking, and a 2025 filter carried into a new question. Passing answers were also read by hand, which found goods counted from two different tables depending on the language and some unreadable condition labels.
+
+Regression on the cheap model, `gpt-6-luna` with low effort: the natural conversations scored 85/96, the main set 99/100 and the challenge set 32/32. Of the 11 conversation failures, 5 were expected values that still had four decimals. Three were real regressions from these changes: `город Ташкент` searched in the address text and reported no records, `Dona` treated as a missing product, and sugar per kilogram reported as absent. Application checks were added for all three. Rerun on the production model, 10 of those 11 passed. The other still gets the right deal, but its first reply is a question about the unit recorded as `unavailable`. The main-set miss also passed on the production model.
+
+Offline: 785 tests passed and 3 skipped, with lint and format checks passing. The dataset was reimported for `amount_usd` and the days fields.
+
+Limits of these results. The 100/100 run came before the last two commits, and only the 18 affected questions were repeated afterwards. The questions were written before the code and then used to fix it, so this score is not an estimate for unseen questions. The natural, main and challenge sets were run in full only on the cheap model this round. No real Telegram account has tested this version, so multi-part messages have not been seen in the Telegram app.
