@@ -141,6 +141,8 @@ class Engine:
                         data = await asyncio.to_thread(self.database.query, query.sql, query_id)
                         evidence[query_id] = data
                         output = data.model_dump(mode="json")
+                        output["result_row_count"] = len(data.rows)
+                        output["rows"] = output["rows"][:20]
                     elif call.name == "calculate_ratio":
                         calculation = Calculation.model_validate(arguments)
                         if calculation.query_id not in evidence:
@@ -156,6 +158,8 @@ class Engine:
                         data.query_id = query_id
                         evidence[query_id] = data
                         output = data.model_dump(mode="json")
+                        output["result_row_count"] = len(data.rows)
+                        output["rows"] = output["rows"][:20]
                     elif call.name == "finish":
                         finish = Finish.model_validate(arguments)
                         data = evidence.get(finish.query_id)

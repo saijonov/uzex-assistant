@@ -14,6 +14,13 @@ from sqlglot import exp
 from uzex.models import Evidence
 
 TABLES = {"registry", "contracts", "participants", "brokers", "usd_rates"}
+ROW_LIMITS = {
+    "registry": 100,
+    "contracts": 7000,
+    "participants": 15000,
+    "brokers": 1000,
+    "usd_rates": 2000,
+}
 FUNCTIONS = {
     "AND",
     "OR",
@@ -182,8 +189,8 @@ def validate_query(sql: str) -> tuple[exp.Select, str]:
             limit_value = int(limit.expression.this)
         except (ValueError, AttributeError, TypeError) as error:
             raise ValueError("Limit must be an integer") from error
-        if not 1 <= limit_value <= 100:
-            raise ValueError("Limit must be between 1 and 100")
+        if not 1 <= limit_value <= ROW_LIMITS[table.name]:
+            raise ValueError(f"Limit must be between 1 and {ROW_LIMITS[table.name]}")
     return tree, table.name
 
 
@@ -255,8 +262,9 @@ class Database:
 
     def query(self, sql: str, query_id: str, timeout: float = 8) -> Evidence:
         tree, table = validate_query(sql)
+        row_limit = ROW_LIMITS[table]
         if not tree.args.get("limit"):
-            tree = tree.limit(101)
+            tree = tree.limit(row_limit + 1)
         with self.connect() as db:
             timer = threading.Timer(timeout, db.interrupt)
             timer.start()
@@ -267,7 +275,7 @@ class Database:
                     raise ValueError("Output columns must have unique aliases")
                 rows = [
                     dict(zip(columns, map(serial, row), strict=True))
-                    for row in result.fetchmany(101)
+                    for row in result.fetchmany(row_limit + 1)
                 ]
                 expressions = {}
                 for index, item in enumerate(tree.expressions):
@@ -384,7 +392,7 @@ class Database:
                     query_id=query_id,
                     sql=sql,
                     table=table,
-                    rows=rows[:100],
+                    rows=rows[:row_limit],
                     matched_count=count,
                     samples=samples,
                     period_start=serial(start),
@@ -394,7 +402,8 @@ class Database:
                     filters=tree.args["where"].sql(dialect="duckdb")
                     if tree.args.get("where")
                     else None,
-                    truncated=len(rows) > 100,
+                    truncated=len(rows) > row_limit,
+                    row_limit=row_limit,
                     expressions=expressions,
                     selected_record_count=selected_count,
                 )

@@ -76,11 +76,20 @@ Use ISO date literals for query filters. Human input can use DD.MM.YYYY or Uzbek
 For region use region for seller warehouse, seller_region/buyer_region for company registration.
 Toshkent city and Toshkent region are different; ask if ambiguous.
 Both broker roles matter; use OR to count deals involving a broker without double counting.
-For top/rank questions ORDER BY requested metric DESC and LIMIT requested N (max 100).
+For top/rank questions ORDER BY requested metric DESC and LIMIT requested N.
+Registry outputs are capped at 100 rows. Directory limits: participants 15000, brokers 1000,
+contracts 7000, usd_rates 2000. For ALL sellers use participants WHERE role='Продавец'
+without LIMIT; for ALL brokers use brokers without LIMIT. Never add LIMIT 100 to an ALL
+directory request. Use stable ORDER BY inn or broker_code for lists.
+Tool responses show at most 20 preview rows; result_row_count is the actual stored result size.
+The application provides all stored rows through paginated messages and CSV. Do not re-query
+the same list merely to make the preview show every row.
+If the user asks for 100 entries in a follow-up, use conversation context and LIMIT 100,
+not the first 10 preview rows. A requested count and a total population are different.
 For the earliest/latest deal, order by deal_date, deal_time, deal_id (all ASC/DESC)
 and LIMIT 1. The result's selected_record_count and dates describe the selected deals;
 matched_count can describe the broader candidate set, not the selected deal itself.
-For complete lists >100 report truncation; never describe the first 100 as the whole set.
+If truncated is true, never describe the limited result as the whole set.
 An empty result is no_match only if a query actually executed; API/tool errors are not absence.
 Finish answer must reference an executed query_id (or calculated result) with actual evidence.
 No_match must reference an executed query with no matching records or no selected groups.

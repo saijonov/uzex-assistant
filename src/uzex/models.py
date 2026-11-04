@@ -58,6 +58,7 @@ class Evidence(BaseModel):
     calculation: str | None = None
     expressions: dict[str, str] = Field(default_factory=dict)
     selected_record_count: int | None = None
+    row_limit: int = 100
 
 
 class Answer(BaseModel):
