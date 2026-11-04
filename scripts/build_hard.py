@@ -76,7 +76,7 @@ def facts(archive: Path) -> dict:
         seller_hs = defaultdict(set)
         first_deal_hs = None
         usd_2025 = sugar_amount = sugar_tonnes = cement_amount = cement_tonnes = Decimal(0)
-        turnover_2024 = turnover_2025 = Decimal(0)
+        turnover_2024 = turnover_2025 = converted_usd_2025 = Decimal(0)
         cancelled_2025 = usd_count_2025 = trading_2025 = oct_2026 = late = 0
         deal_ids = set()
         with localcontext() as context:
@@ -141,6 +141,7 @@ def facts(archive: Path) -> dict:
                         turnover_2024 += in_uzs
                     if year == 2025:
                         turnover_2025 += in_uzs
+                        converted_usd_2025 += in_uzs / rates[row["Дата сделки"]]
                         out["region_turnover_2025"][row["Регион"]] += in_uzs
                         if usd:
                             usd_2025 += amount
@@ -190,8 +191,9 @@ def facts(archive: Path) -> dict:
                 sugar_per_tonne=rounded(sugar_amount / sugar_tonnes),
                 sugar_per_kg=rounded(sugar_amount / sugar_tonnes / 1000),
                 cement_per_tonne=rounded(cement_amount / cement_tonnes),
-                turnover_2024=plain(turnover_2024),
-                turnover_2025=plain(turnover_2025),
+                turnover_2024=rounded(turnover_2024),
+                turnover_2025=rounded(turnover_2025),
+                converted_usd_2025=rounded(converted_usd_2025),
                 cancel_share=percent_forms(Decimal(out["status"][CANCELLED]) * 100 / total),
                 growth=percent_forms(
                     Decimal(out["year"][2025] - out["year"][2024]) * 100 / out["year"][2024]
@@ -271,7 +273,7 @@ def build(archive: Path) -> list[dict]:
         "dollar_follow_up_uz",
         critical,
         turn("2025-yil aylanmasi qancha?", language="uz", in_text=[f["turnover_2025"]]),
-        turn("dollarda-chi?", language="uz", in_text=[f["usd_2025"]]),
+        turn("dollarda-chi?", language="uz", any_in_text=[f["converted_usd_2025"], f["usd_2025"]]),
     )
     add(
         "sample_sum_uses_all_uz",
