@@ -238,13 +238,23 @@ def render_answer(answer: Answer) -> str:
             + f": {data.matched_count:,}".replace(",", " ")
         )
     expressions = " ".join(data.expressions.values()).lower()
-    if data.currencies and re.search(r"\b(amount|starting_price|base_price)\b", expressions) and not re.search(r"\bcurrency\b", expressions):
+    if (
+        data.currencies
+        and re.search(r"\b(amount|starting_price|base_price)\b", expressions)
+        and not re.search(r"\bcurrency\b", expressions)
+    ):
         lines.append(
             tr(("Valyuta", "Валюта"), lang)
             + ": "
             + ", ".join(localize(value, lang) for value in data.currencies)
         )
-    if data.units and re.search(r"\b(volume|delivered_volume|starting_price|base_price|lot_size)\b", expressions) and not re.search(r"\bunit\b", expressions):
+    if (
+        data.units
+        and re.search(
+            r"\b(volume|delivered_volume|starting_price|base_price|lot_size)\b", expressions
+        )
+        and not re.search(r"\bunit\b", expressions)
+    ):
         lines.append(
             tr(("Birlik", "Единица"), lang)
             + ": "

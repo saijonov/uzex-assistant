@@ -10,6 +10,8 @@ from uzex.telegram import Service
 class FakeBot:
     def __init__(self):
         self.messages = []
+        self.commands = []
+        self.documents = []
 
     async def send_message(self, chat_id, text, **kwargs):
         self.messages.append({"chat_id": chat_id, "text": text, **kwargs})
@@ -19,6 +21,12 @@ class FakeBot:
 
     async def send_chat_action(self, *args):
         pass
+
+    async def set_my_commands(self, commands, **kwargs):
+        self.commands.append((commands, kwargs))
+
+    async def send_document(self, chat_id, document, **kwargs):
+        self.documents.append({"chat_id": chat_id, "document": document, **kwargs})
 
 
 def message_job(text, chat_id=1):
@@ -82,10 +90,15 @@ async def test_source_callback_cannot_access_another_chat(tmp_path, sample_datab
     other = {
         "chat_id": 2,
         "payload": json.dumps(
-            {"type": "callback", "data": "sources:" + job["id"], "callback_id": "c"}
+            {
+                "type": "callback",
+                "data": "sources:" + job["id"],
+                "callback_id": "c",
+                "language_code": "ru",
+            }
         ),
     }
     result = await service.prepare(other)
     assert "private" not in result["texts"][0]
-    assert "недоступен" in result["texts"][0]
+    assert "не найден" in result["texts"][0]
     state.close()
