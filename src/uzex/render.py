@@ -1,12 +1,14 @@
 import csv
 import io
 import re
+from decimal import Decimal
 
 import sqlglot
 from sqlglot import exp
 
 from uzex.localization import localize
 from uzex.models import Answer, Evidence
+from uzex.terminology import display_value
 
 LABELS = {
     "deal_id": ("Bitim raqami", "Номер сделки"),
@@ -43,7 +45,7 @@ LABELS = {
     "status": ("Holat", "Состояние"),
     "category": ("Toifa", "Категория"),
     "brand": ("Marka", "Марка"),
-    "grade": ("Sort", "Сорт"),
+    "grade": ("Nav", "Сорт"),
     "size": ("O‘lcham", "Размер"),
     "product_type": ("Mahsulot turi", "Тип товара"),
     "product_class": ("Sinf", "Класс"),
@@ -170,12 +172,177 @@ def label(expression: str, language: str) -> str:
     return expression
 
 
-def format_value(value, language: str) -> str:
+def source_field(expression: str) -> str | None:
+    match = re.fullmatch(r"(?:\w+\.)?(\w+)", expression)
+    return match.group(1) if match else None
+
+
+def format_value(value, language: str, field: str | None = None) -> str:
     if value is None:
         return tr(("Ko‘rsatilmagan", "Не указано"), language)
     if isinstance(value, bool):
         return tr(("Ha", "Да"), language) if value else tr(("Yo‘q", "Нет"), language)
-    return localize(str(value), language)
+    protected = {
+        "deal_id",
+        "contract_id",
+        "seller_inn",
+        "buyer_inn",
+        "inn",
+        "hs_code",
+        "brand",
+        "size",
+        "name",
+        "seller_name",
+        "buyer_name",
+        "seller_broker_name",
+        "buyer_broker_name",
+        "warehouse_address",
+    }
+    number = str(value)
+    if field not in protected and re.fullmatch(r"-?\d+(?:\.\d+)?", number):
+        whole, dot, fraction = number.partition(".")
+        fraction = fraction.rstrip("0")
+        if field in {"amount", "amount_uzs", "starting_price", "base_price", "usd_uzs"}:
+            fraction = fraction.ljust(2, "0")
+        sign = "-" if whole.startswith("-") else ""
+        whole = sign + f"{abs(int(whole)):,}".replace(",", " ")
+        return whole + ("." + fraction if fraction else "")
+    return display_value(str(value), language, field)
+
+
+DETAIL_SECTIONS = [
+    (
+        ("Bitim", "Сделка"),
+        [
+            "deal_id",
+            "deal_date",
+            "deal_time",
+            "status",
+            "auction_type",
+            "contract_id",
+            "contract_type",
+            "contract_form",
+        ],
+    ),
+    (
+        ("Tovar", "Товар"),
+        [
+            "product_name",
+            "product",
+            "brand",
+            "size",
+            "grade",
+            "product_type",
+            "product_class",
+            "hs_code",
+            "category",
+            "product_group",
+            "industry",
+            "unit",
+        ],
+    ),
+    (
+        ("Narx va hajm", "Цена и объём"),
+        [
+            "quantity_lots",
+            "lot_size",
+            "volume",
+            "mass_kg",
+            "amount",
+            "currency",
+            "starting_price",
+            "base_price",
+            "amount_uzs",
+            "usd_uzs",
+            "deposit_percent",
+        ],
+    ),
+    (
+        ("To‘lov va yetkazish", "Оплата и поставка"),
+        [
+            "paid_on",
+            "payment_due",
+            "payment_days",
+            "delivered_on",
+            "delivery_due",
+            "delivery_days",
+            "delivered_lots",
+            "delivered_volume",
+            "delivered_mass_kg",
+            "delivery_basis",
+            "packaging",
+            "region",
+            "region_ru",
+            "warehouse_address",
+        ],
+    ),
+    (
+        ("Ishtirokchilar", "Участники"),
+        [
+            "seller_name",
+            "seller_inn",
+            "seller_region",
+            "seller_vat_payer",
+            "seller_broker_name",
+            "seller_broker_code",
+            "buyer_name",
+            "buyer_inn",
+            "buyer_region",
+            "buyer_vat_payer",
+            "buyer_broker_name",
+            "buyer_broker_code",
+        ],
+    ),
+    (("Shartnoma muddati", "Срок контракта"), ["registered_on", "valid_until"]),
+]
+
+
+def render_detail(row: dict, data: Evidence, language: str) -> list[str]:
+    identity = row["deal_id"]
+    lines = [tr((f"{identity}-bitim haqida ma’lumot.", f"Данные по сделке {identity}."), language)]
+    skip = {"source_file", "source_row"}
+    if "status" in row:
+        skip.add("is_cancelled")
+    if row.get("product_name"):
+        skip.add("product")
+    if (
+        row.get("currency") == "Узбекский сум"
+        and row.get("amount_uzs") is not None
+        and row.get("amount") is not None
+        and Decimal(str(row["amount_uzs"])) == Decimal(str(row["amount"]))
+    ):
+        skip.add("amount_uzs")
+    if row.get("unit") == "килограмм":
+        skip.update({"mass_kg", "delivered_mass_kg"})
+    if localize(str(row.get("region")), language) == localize(str(row.get("region_ru")), language):
+        skip.add("region_ru")
+    used = set(skip)
+    missing = []
+    for title, fields in DETAIL_SECTIONS:
+        values = []
+        for key in fields:
+            if key in row and key not in used:
+                used.add(key)
+                if row[key] is None:
+                    missing.append(label(key, language).lower())
+                else:
+                    field = source_field(data.expressions.get(key, key))
+                    values.append(
+                        f"{label(data.expressions.get(key, key), language)}: {format_value(row[key], language, field)}"
+                    )
+        if values:
+            lines.extend(["", tr(title, language), *values])
+    for key, value in row.items():
+        if key not in used:
+            field = source_field(data.expressions.get(key, key))
+            lines.append(
+                f"{label(data.expressions.get(key, key), language)}: {format_value(value, language, field)}"
+            )
+    if missing:
+        lines.extend(
+            ["", tr(("Ko‘rsatilmagan", "Не указано"), language) + ": " + ", ".join(missing) + "."]
+        )
+    return lines
 
 
 def render_calculation(data: Evidence, language: str) -> str:
@@ -215,12 +382,19 @@ def render_answer(answer: Answer) -> str:
     for index, row in enumerate(data.rows[:10], 1):
         if len(data.rows) > 1:
             lines.append(f"\n{index}.")
+        if len(row) >= 15 and source_field(data.expressions.get("deal_id", "")) == "deal_id":
+            lines.extend(render_detail(row, data, lang))
+            continue
         for key, value in row.items():
+            field = source_field(data.expressions.get(key, key))
             lines.append(
-                f"{label(data.expressions.get(key, key), lang)}: {format_value(value, lang)}"
+                f"{label(data.expressions.get(key, key), lang)}: {format_value(value, lang, field)}"
             )
     lines.append("")
-    if data.period_start:
+    already_shows_date = len(data.rows) == 1 and any(
+        source_field(value) == "deal_date" for value in data.expressions.values()
+    )
+    if data.period_start and not already_shows_date:
         if data.period_start == data.period_end:
             lines.append(tr(("Sana", "Дата"), lang) + f": {data.period_start}")
         else:
@@ -232,10 +406,13 @@ def render_answer(answer: Answer) -> str:
                 lang,
             )
             lines.append(tr(("Davr", "Период"), lang) + f": {period}")
-    if data.matched_count != 1:
+    record_count = (
+        data.selected_record_count if data.selected_record_count is not None else data.matched_count
+    )
+    if record_count != 1:
         lines.append(
             tr(("Hisobga olingan yozuvlar", "Учтено записей"), lang)
-            + f": {data.matched_count:,}".replace(",", " ")
+            + f": {record_count:,}".replace(",", " ")
         )
     expressions = " ".join(data.expressions.values()).lower()
     if (
@@ -296,10 +473,28 @@ def render_sources(data: Evidence, language: str) -> str:
             language,
         )
     )
-    lines.append(tr(("Mos yozuvlar", "Совпавших записей"), language) + f": {data.matched_count}")
+    lines.append(
+        tr(("Qidiruvdagi yozuvlar", "Записей в области поиска"), language)
+        + f": {data.matched_count}"
+    )
+    if data.selected_record_count is not None:
+        lines.append(
+            tr(("Tanlangan bitimlar", "Выбрано сделок"), language)
+            + f": {data.selected_record_count}"
+        )
     lines.append(tr(("Hisoblash sharti", "Условия расчёта"), language) + ":\n" + data.sql)
     if data.calculation:
         lines.append(data.calculation)
+    originals = []
+    for row in data.rows[:3]:
+        for key in ("product_name", "product"):
+            if row.get(key) and row[key] not in originals:
+                originals.append(row[key])
+    if originals:
+        lines.append(
+            tr(("Manbadagi tovar nomlari", "Названия товаров в источнике"), language) + ":"
+        )
+        lines.extend(originals)
     lines.append(tr(("Mos yozuvlardan misollar", "Примеры исходных записей"), language) + ":")
     for row in data.samples:
         lines.append(

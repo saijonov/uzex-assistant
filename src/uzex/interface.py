@@ -79,6 +79,18 @@ def telegram_html(value: str) -> str:
         "Примеры",
         "Manbalar",
         "Источники",
+        "Bitim",
+        "Сделка",
+        "Tovar",
+        "Товар",
+        "Narx va hajm",
+        "Цена и объём",
+        "To‘lov va yetkazish",
+        "Оплата и поставка",
+        "Ishtirokchilar",
+        "Участники",
+        "Shartnoma muddati",
+        "Срок контракта",
     }
     lines = []
     for line in value.split("\n"):
