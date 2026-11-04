@@ -5,6 +5,7 @@ from decimal import Decimal
 
 import sqlglot
 from sqlglot import exp
+from sqlglot.errors import SqlglotError
 
 from uzex.localization import localize
 from uzex.models import Answer, Evidence
@@ -129,6 +130,10 @@ def tr(values: tuple[str, str], language: str) -> str:
     return values[1 if language == "ru" else 0]
 
 
+def error_text(language: str) -> str:
+    return tr(TEXT["error"], language)
+
+
 def label(expression: str, language: str) -> str:
     if expression in LABELS:
         return tr(LABELS[expression], language)
@@ -163,12 +168,23 @@ def label(expression: str, language: str) -> str:
                 "MIN": ("Eng kichik", "Минимум"),
                 "MAX": ("Eng katta", "Максимум"),
             }
+            if isinstance(parsed.this, exp.Distinct):
+                fields = ", ".join(
+                    label(item.sql(dialect="duckdb"), language) for item in parsed.this.expressions
+                )
+                if parsed.sql_name() == "COUNT":
+                    return (
+                        tr(("Turli qiymatlar soni", "Количество разных значений"), language)
+                        + f": {fields}"
+                    )
+                prefix = tr(prefixes[parsed.sql_name()], language)
+                return f"{prefix}, {tr(('takrorlanmasdan', 'без повторов'), language)}: {fields}"
             field = parsed.this.sql(dialect="duckdb")
             if field == "*":
                 return tr(("Yozuvlar soni", "Количество записей"), language)
             prefix = tr(prefixes[parsed.sql_name()], language)
             return f"{prefix}: {label(field, language)}"
-    except (ValueError, KeyError, AttributeError):
+    except (ValueError, KeyError, AttributeError, SqlglotError):
         pass
     return expression
 

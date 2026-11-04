@@ -29,7 +29,14 @@ from uzex.interface import greeting, main_keyboard, menu_action, telegram_html
 from uzex.interface import text as ui_text
 from uzex.models import Answer
 from uzex.policy import attach_csv, export_followup, file_preference, resolve_pending_reply
-from uzex.render import export_csv, render_answer, render_sources, split_text, tr
+from uzex.render import (
+    error_text,
+    export_csv,
+    render_answer,
+    render_sources,
+    split_text,
+    tr,
+)
 from uzex.state import State
 
 logger = logging.getLogger(__name__)
@@ -401,25 +408,46 @@ class Service:
             self.state.sent_part(job["id"], len(texts) + 1)
         self.state.complete(job["id"])
 
+    def job_language(self, job: dict) -> str:
+        return guess_language(json.loads(job["payload"]).get("text") or "")
+
+    def failure_result(self, job: dict) -> dict:
+        answer = Answer(outcome="error", language=self.job_language(job))
+        return {"texts": [error_text(answer.language)], "answer": answer.model_dump(mode="json")}
+
+    async def process(self, job: dict):
+        try:
+            if job["result"]:
+                result = json.loads(job["result"])
+            else:
+                try:
+                    result = await self.prepare(job)
+                except Exception as error:
+                    logger.warning("prepare_failed id=%s type=%s", job["id"], type(error).__name__)
+                    result = self.failure_result(job)
+            self.state.save_result(job["id"], result)
+            await self.deliver(job, result)
+        except TelegramRetryAfter as error:
+            self.state.retry(job["id"], error.retry_after + 1)
+        except TelegramForbiddenError:
+            self.state.retry(job["id"], 0, failed=True)
+        except TelegramBadRequest:
+            self.state.retry(job["id"], 0, failed=True)
+            with contextlib.suppress(TelegramAPIError):
+                await self.bot.send_message(job["chat_id"], error_text(self.job_language(job)))
+        except Exception as error:
+            logger.warning("job_failed id=%s type=%s", job["id"], type(error).__name__)
+            self.state.retry(
+                job["id"], min(2 ** (job["attempts"] + 1), 30), failed=job["attempts"] >= 4
+            )
+
     async def worker(self):
         while not self.stopping.is_set():
             job = self.state.claim()
             if job is None:
                 await asyncio.sleep(0.2)
                 continue
-            try:
-                result = json.loads(job["result"]) if job["result"] else await self.prepare(job)
-                self.state.save_result(job["id"], result)
-                await self.deliver(job, result)
-            except TelegramRetryAfter as error:
-                self.state.retry(job["id"], error.retry_after + 1)
-            except (TelegramForbiddenError, TelegramBadRequest):
-                self.state.retry(job["id"], 0, failed=True)
-            except Exception as error:
-                logger.warning("job_failed id=%s type=%s", job["id"], type(error).__name__)
-                self.state.retry(
-                    job["id"], min(2 ** (job["attempts"] + 1), 30), failed=job["attempts"] >= 4
-                )
+            await self.process(job)
 
 
 async def run_bot(settings: Settings):
