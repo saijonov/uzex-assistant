@@ -28,7 +28,13 @@ from uzex.engine import Engine, guess_language
 from uzex.interface import greeting, main_keyboard, menu_action, telegram_html
 from uzex.interface import text as ui_text
 from uzex.models import Answer
-from uzex.policy import attach_csv, export_followup, file_preference, resolve_pending_reply
+from uzex.policy import (
+    attach_csv,
+    export_followup,
+    file_preference,
+    malformed_identifier,
+    resolve_pending_reply,
+)
 from uzex.render import (
     all_shown_text,
     error_text,
@@ -320,6 +326,30 @@ class Service:
             self.state.remember(chat_id, text, caption)
             self.state.set_pending(chat_id, None)
             return {"texts": [], "source_csv": filename, "caption": caption}
+        number = malformed_identifier(text)
+        if number:
+            suggestions = await asyncio.to_thread(
+                self.engine.database.identifier_suggestions, number
+            )
+            answer = Answer(
+                outcome="clarify",
+                language=guess_language(text),
+                reason="wrong_length",
+                identifier=number,
+                candidates=[{"name": item, "replaces": number} for item in suggestions],
+            )
+            rendered = render_answer(answer)
+            self.state.remember(chat_id, text, rendered)
+            self.state.set_pending(
+                chat_id,
+                {
+                    "question": text,
+                    "missing_fields": ["entity"],
+                    "candidates": answer.candidates,
+                    "delivery": file_preference(text),
+                },
+            )
+            return {"texts": [rendered], "answer": answer.model_dump(mode="json")}
         pending = resolve_pending_reply(pending, text)
         latest = self.state.latest_result(chat_id)
         remaining = self.engine.settings.answer_timeout_seconds - (time.time() - job["received"])

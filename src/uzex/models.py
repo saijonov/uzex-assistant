@@ -145,6 +145,7 @@ class Answer(BaseModel):
     language: Literal["uz", "ru"] = "uz"
     reason: str = "none"
     topic: str | None = None
+    identifier: str | None = None
     evidence: Evidence | None = None
     candidates: list[dict] = Field(default_factory=list)
     elapsed_seconds: float = 0

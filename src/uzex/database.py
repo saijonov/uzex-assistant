@@ -436,6 +436,27 @@ class Database:
                 kinds.append("contract")
         return kinds
 
+    def identifier_suggestions(self, number: str) -> list[str]:
+        shorter = {number[:index] + number[index + 1 :] for index in range(len(number))}
+        known = set()
+        with self.connect() as db:
+            for value in sorted(shorter):
+                if len(value) == 6 and (
+                    db.execute("SELECT 1 FROM deals WHERE deal_id = ? LIMIT 1", [value]).fetchone()
+                    or db.execute(
+                        "SELECT 1 FROM contracts WHERE contract_id = ? LIMIT 1", [value]
+                    ).fetchone()
+                ):
+                    known.add(value)
+                if len(value) == 9 and (
+                    db.execute(
+                        "SELECT 1 FROM participants WHERE inn = ? LIMIT 1", [value]
+                    ).fetchone()
+                    or db.execute("SELECT 1 FROM brokers WHERE inn = ? LIMIT 1", [value]).fetchone()
+                ):
+                    known.add(value)
+        return sorted(known)[:3]
+
     def connect(self):
         return duckdb.connect(
             str(self.path),

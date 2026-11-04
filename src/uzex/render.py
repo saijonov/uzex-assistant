@@ -566,6 +566,29 @@ def cancellation_note(data: Evidence, language: str) -> str | None:
     return None
 
 
+def wrong_length_text(answer: Answer) -> list[str]:
+    number, language = answer.identifier, answer.language
+    lines = [
+        tr(
+            (
+                f"{number} raqami topilmadi: unda {len(number)} ta raqam bor. "
+                "Bitim va shartnoma raqamlarida 6 ta, STIRda 9 ta raqam bo‘ladi.",
+                f"Номер {number} не найден: в нём {len(number)} цифр. "
+                "В номере сделки или контракта 6 цифр, в ИНН 9.",
+            ),
+            language,
+        )
+    ]
+    lines.append(
+        tr(("Shuni nazarda tutdingizmi?", "Возможно, вы имели в виду:"), language)
+        if answer.candidates
+        else tr(
+            ("Raqamni tekshirib, qayta yozing.", "Проверьте номер и напишите ещё раз."), language
+        )
+    )
+    return lines
+
+
 def render_answer(answer: Answer, page: int = 0) -> str:
     lang = answer.language
     if answer.outcome == "error":
@@ -573,11 +596,12 @@ def render_answer(answer: Answer, page: int = 0) -> str:
     if answer.outcome == "about":
         return render_about(answer)
     if answer.outcome in {"unavailable", "clarify"}:
-        lines = (
-            [tr(CLARIFICATION_TEXT[field], lang) for field in answer.missing_fields]
-            if answer.missing_fields
-            else [tr(TEXT.get(answer.reason, TEXT["unsupported"]), lang)]
-        )
+        if answer.reason == "wrong_length":
+            lines = wrong_length_text(answer)
+        elif answer.missing_fields:
+            lines = [tr(CLARIFICATION_TEXT[field], lang) for field in answer.missing_fields]
+        else:
+            lines = [tr(TEXT.get(answer.reason, TEXT["unsupported"]), lang)]
         for index, item in enumerate(answer.candidates, 1):
             parts = [str(item["name"])] if item.get("name") else []
             if item.get("inn"):

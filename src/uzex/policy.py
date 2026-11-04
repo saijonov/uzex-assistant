@@ -15,6 +15,19 @@ RECORD_NUMBER = re.compile(r"\b\d{6}\b")
 RECORD_KIND_WORDS = re.compile(
     r"\b(?:bitim\w*|sdelk\w*|sdelok|shartnoma\w*|kontrakt\w*|deal\w*|contract\w*)\b"
 )
+RECORD_WORDS = (
+    r"(?:(?P<deal>bitim\w*|sdelk\w*|sdelok|shartnoma\w*|kontrakt\w*)"
+    r"|(?P<tax>stir\w*|inn(?:i|ni|si)?)"
+    r"|(?P<company>firm\w*|kompani\w*|korxona\w*))"
+)
+NUMBER_FILLER = r"(?: (?:raqam\w*|nomer\w*))?"
+NOT_AN_IDENTIFIER = (
+    r"(?! (?:so?m\w*|sum\w*|dollar\w*|usd|rubl\w*|dan|ta|tadan|tonn\w*|kg|lot\w*|dona\w*)\b)"
+)
+NUMBER_BEFORE_WORD = re.compile(rf"\b(?P<number>\d+){NUMBER_FILLER} {RECORD_WORDS}\b")
+WORD_BEFORE_NUMBER = re.compile(
+    rf"\b{RECORD_WORDS}{NUMBER_FILLER} (?P<number>\d+)\b{NOT_AN_IDENTIFIER}"
+)
 PERCENT_WORDS = re.compile(r"\b(?:foiz\w*|ulush\w*|protsent\w*|dol[yiu]\w*)\b")
 AGGREGATE_EXPRESSION = re.compile(r"(?:COUNT|SUM|MIN|MAX|MEDIAN)\(", re.IGNORECASE)
 NO_PREFERENCE = re.compile(
@@ -130,6 +143,20 @@ def missing_requirements(
         if identity in missing:
             return [identity]
     return missing[:2]
+
+
+def malformed_identifier(question: str) -> str | None:
+    value = normalize(question)
+    for pattern in (NUMBER_BEFORE_WORD, WORD_BEFORE_NUMBER):
+        for match in pattern.finditer(value):
+            number = match["number"]
+            if match["tax"] and len(number) != 9:
+                return number
+            if match["company"] and len(number) >= 7 and len(number) != 9:
+                return number
+            if match["deal"] and len(number) >= 7:
+                return number
+    return None
 
 
 def bare_record_number(review: RequestReview, question: str, pending: dict | None) -> str | None:
@@ -280,5 +307,13 @@ def resolve_pending_reply(pending: dict | None, question: str) -> dict | None:
     }
     number = int(value) if value.isdecimal() and len(value) <= 2 else ordinals.get(value)
     if number and 1 <= number <= len(pending["candidates"]):
-        return {**pending, "selected_candidate": pending["candidates"][number - 1]}
+        selected = pending["candidates"][number - 1]
+        if selected.get("replaces"):
+            return {
+                **pending,
+                "question": pending["question"].replace(selected["replaces"], selected["name"]),
+                "missing_fields": [],
+                "candidates": [],
+            }
+        return {**pending, "selected_candidate": selected}
     return pending
