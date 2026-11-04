@@ -211,16 +211,25 @@ def unavailable_request(review: RequestReview, question: str) -> str | None:
     return None
 
 
+FILE_TERM = r"\b(?:csv|excel|xlsx|eksel\w*|fayl\w*|file\w*)"
+DECLINES_FILE = re.compile(
+    FILE_TERM
+    + r".{0,25}\b(?:kerak emas|kerakmas|yuborma\w*|jonatma\w*|berma\w*|qilma\w*|ne nujen|ne nado)"
+    + r"|\b(?:bez|no|without|ne nujen|ne nado|ne prisilay\w*|ne otpravlyay\w*)\b.{0,15}"
+    + FILE_TERM
+    + r"|\bfaqat matn|\btext only|\btolko tekst|\bfaylsiz\b"
+)
+ASKS_FOR_FILE = re.compile(
+    r"\b(?:jonat\w*|yubor\w*|ber\w{0,5}|format\w*|skacha\w*|skin\w*|prishli\w*|otprav\w*|"
+    r"send|download|qil\w*|day|dayte)\b"
+)
+
+
 def file_preference(question: str) -> str:
     value = normalize(question)
-    if re.search(
-        r"(?:csv|fayl|file).{0,25}(?:kerak emas|kerakmas|yuborma|jonatma|ne nujen|ne nuzhen|ne nado)|(?:bez|bez fayla|no|without|ne nujen|ne nuzhen|ne nado).{0,15}(?:csv|file|fayl)|faqat matn|text only|tolko tekst|ne (?:prisilay|otpravlyay).{0,15}csv|faylsiz",
-        value,
-    ):
+    if DECLINES_FILE.search(value):
         return "text"
-    if re.search(r"\bcsv\b", value) and re.search(
-        r"jonat|yubor|ber|format|skacha|prishli|otprav|send|download|qilib", value
-    ):
+    if re.search(FILE_TERM, value) and ASKS_FOR_FILE.search(value):
         return "csv"
     if value in {"csv", "v csv", "csv formatida", "v formate csv"}:
         return "csv"
@@ -239,6 +248,8 @@ EXPORT_FILLER = set(
 
 
 def export_followup(question: str) -> bool:
+    if DECLINES_FILE.search(normalize(question)):
+        return False
     tokens = normalize(question).split()
     has_file_word = any(FILE_WORD.fullmatch(token) for token in tokens)
     return has_file_word and all(

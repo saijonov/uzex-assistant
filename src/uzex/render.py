@@ -709,6 +709,21 @@ def cap_text(data: Evidence, language: str) -> str:
     )
 
 
+def file_summary(answer: Answer) -> str:
+    data, language = answer.evidence, answer.language
+    rows = count_text(len(data.rows))
+    lines = [
+        tr((f"Natija CSV faylda: {rows} ta yozuv.", f"Результат в CSV-файле: {rows}."), language)
+    ]
+    conditions = applied_conditions(data, language, include_dates=True)
+    if conditions:
+        lines.append(tr(("Shartlar", "Условия"), language) + f": {conditions}")
+    if data.capped:
+        lines.append(cap_text(data, language))
+    lines.append(tr(("Manba", "Источник"), language) + ": " + source_text(data, language))
+    return "\n".join(lines)
+
+
 def count_text(value: int) -> str:
     return f"{value:,}".replace(",", " ")
 
@@ -1054,7 +1069,13 @@ def export_csv(data: Evidence) -> bytes:
         writer.writeheader()
         for row in data.rows:
             safe = {
-                k: ("'" + v if isinstance(v, str) and re.match(r"^[=+@\-\t\r]", v) else v)
+                k: (
+                    "'" + v
+                    if isinstance(v, str)
+                    and re.match(r"^[=+@\-\t\r]", v)
+                    and not re.fullmatch(r"-\d+(?:\.\d+)?", v)
+                    else v
+                )
                 for k, v in row.items()
             }
             writer.writerow(safe)

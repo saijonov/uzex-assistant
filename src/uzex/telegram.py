@@ -33,6 +33,7 @@ from uzex.render import (
     all_shown_text,
     error_text,
     export_csv,
+    file_summary,
     memory_text,
     render_answer,
     render_sources,
@@ -374,6 +375,8 @@ class Service:
         if attach_csv(delivery_question, answer):
             result["attach_csv"] = True
             result["caption"] = csv_caption(answer)
+            if file_preference(delivery_question) == "csv" and len(answer.evidence.rows) > 10:
+                result["texts"] = split_text(file_summary(answer))
         return result
 
     def about_previous(self, chat_id: int, text: str, answer: Answer, latest: dict) -> dict:
