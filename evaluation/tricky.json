@@ -1796,5 +1796,86 @@
     "language": "ru"
    }
   ]
+ },
+ {
+  "id": "chat_replay",
+  "category": "tricky",
+  "title": "The reported Telegram chat",
+  "turns": [
+   {
+    "q": "privet",
+    "outcomes": [
+     null
+    ]
+   },
+   {
+    "q": "nma gap",
+    "outcomes": [
+     null
+    ],
+    "in_text": [
+     "Salom"
+    ]
+   },
+   {
+    "q": "eng qimmat broker",
+    "outcomes": [
+     "clarify",
+     "unavailable",
+     "answer"
+    ]
+   },
+   {
+    "q": "3tasi boyicha ham",
+    "outcomes": [
+     "answer"
+    ],
+    "in_text": [
+     "BK111",
+     "32422",
+     "20460759051487.47",
+     "BK106",
+     "2366234.562"
+    ]
+   },
+   {
+    "q": "yoq 3 ta broker",
+    "outcomes": [
+     "answer",
+     "clarify"
+    ]
+   },
+   {
+    "q": "bu brokerlarda nechta klient bor",
+    "outcomes": [
+     "answer"
+    ],
+    "any_in_text": [
+     "417",
+     "432"
+    ],
+    "not_in_text": [
+     "416"
+    ]
+   },
+   {
+    "q": "PASUR BROKER MCHJning usddagi jami summasi qancha",
+    "outcomes": [
+     "answer"
+    ],
+    "in_text": [
+     "16315419.76"
+    ]
+   },
+   {
+    "q": "aqsh dollari kursi qanday",
+    "outcomes": [
+     "answer"
+    ],
+    "in_text": [
+     "13357.84"
+    ]
+   }
+  ]
  }
 ]
