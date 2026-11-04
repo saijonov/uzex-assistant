@@ -11,7 +11,7 @@ from sqlglot.errors import SqlglotError
 from uzex.database import DEAL_TABLES
 from uzex.localization import localize
 from uzex.models import Answer, Evidence
-from uzex.policy import CLARIFICATION_TEXT
+from uzex.policy import CLARIFICATION_TEXT, OPTION_TEXT
 from uzex.terminology import display_value
 
 LABELS = {
@@ -566,6 +566,31 @@ def cancellation_note(data: Evidence, language: str) -> str | None:
     return None
 
 
+def candidate_lines(candidates: list[dict], language: str) -> list[str]:
+    lines = []
+    for index, item in enumerate(candidates, 1):
+        parts = [str(item["name"])] if item.get("name") else []
+        if item.get("inn"):
+            parts.append(tr(("STIR", "ИНН"), language) + ": " + str(item["inn"]))
+        if item.get("broker_code"):
+            parts.append(str(item["broker_code"]))
+        if item.get("region_ru"):
+            parts = [localize(str(item["region_ru"]), language)]
+        lines.append(f"{index}. " + "; ".join(parts))
+    return lines
+
+
+def render_options(pending: dict, language: str) -> str:
+    lines = [tr(("Yozishingiz mumkin:", "Можно написать:"), language)]
+    for field in pending.get("missing_fields") or ["entity"]:
+        lines.append("• " + tr(OPTION_TEXT[field], language))
+    candidates = pending.get("candidates") or []
+    if candidates:
+        lines.append(tr(("Yoki raqamini yozing:", "Или укажите номер варианта:"), language))
+        lines.extend(candidate_lines(candidates, language))
+    return "\n".join(lines)
+
+
 def wrong_length_text(answer: Answer) -> list[str]:
     number, language = answer.identifier, answer.language
     lines = [
@@ -602,15 +627,7 @@ def render_answer(answer: Answer, page: int = 0) -> str:
             lines = [tr(CLARIFICATION_TEXT[field], lang) for field in answer.missing_fields]
         else:
             lines = [tr(TEXT.get(answer.reason, TEXT["unsupported"]), lang)]
-        for index, item in enumerate(answer.candidates, 1):
-            parts = [str(item["name"])] if item.get("name") else []
-            if item.get("inn"):
-                parts.append(tr(("STIR", "ИНН"), lang) + ": " + str(item["inn"]))
-            if item.get("broker_code"):
-                parts.append(str(item["broker_code"]))
-            if item.get("region_ru"):
-                parts = [localize(str(item["region_ru"]), lang)]
-            lines.append(f"{index}. " + "; ".join(parts))
+        lines.extend(candidate_lines(answer.candidates, lang))
         return "\n".join(lines)
     data = answer.evidence
     if data is None:

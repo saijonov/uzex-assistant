@@ -85,6 +85,50 @@ CLARIFICATION_TEXT = {
 }
 
 
+RECORD_OPTIONS = (
+    "bitim yoki shartnoma raqami (6 xonali, masalan 100001), kompaniya STIRi (9 xonali) yoki kompaniya nomi.",
+    "номер сделки или контракта (6 цифр, например 100001), ИНН компании (9 цифр) или название компании.",
+)
+OPTION_TEXT = {
+    "entity": RECORD_OPTIONS,
+    "reference": RECORD_OPTIONS,
+    "product": (
+        "tovar nomi, masalan shakar, sement yoki paxta.",
+        "название товара, например сахар, цемент или хлопок.",
+    ),
+    "period": (
+        "yil, oy yoki sana, masalan 2025-yil. Farqi bo‘lmasa, «farqi yo‘q» deb yozing.",
+        "год, месяц или дату, например 2025 год. Если неважно, напишите «неважно».",
+    ),
+    "metric": (
+        "bitimlar soni, summa, hajm yoki narx.",
+        "количество сделок, сумму, объём или цену.",
+    ),
+    "unit": ("kilogramm, tonna, litr, dona yoki metr.", "килограмм, тонна, литр, штука или метр."),
+    "currency": ("so‘m yoki AQSh dollari.", "сум или доллар США."),
+    "role": ("sotuvchilar yoki xaridorlar.", "продавцы или покупатели."),
+    "region": (
+        "hudud nomi. Toshkent uchun «shahar» yoki «viloyat» deb yozing.",
+        "название региона. Для Ташкента напишите «город» или «область».",
+    ),
+    "comparison": (
+        "nimani va qaysi ko‘rsatkich bo‘yicha taqqoslash, masalan 2024 va 2025 yil summasi.",
+        "что и по какому показателю сравнить, например сумму за 2024 и 2025 годы.",
+    ),
+    "ranking": ("bitimlar soni, summa yoki hajm.", "количество сделок, сумма или объём."),
+    "delivery": ("CSV fayl yoki matn.", "CSV-файл или текст."),
+    "record_kind": ("bitim yoki shartnoma.", "сделка или контракт."),
+}
+OPTION_WORDS = re.compile(
+    r"\bvariant\w*|\bnima(?:ni)? yoz\w*|\bchto (?:mne )?(?:napisat|pisat|vvesti|ukazat)\b"
+)
+
+
+def asks_for_options(question: str) -> bool:
+    value = normalize(question)
+    return len(value.split()) <= 6 and bool(OPTION_WORDS.search(value))
+
+
 def missing_requirements(
     review: RequestReview, question: str, history: list, pending: dict | None
 ) -> list[str]:

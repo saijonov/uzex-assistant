@@ -29,6 +29,7 @@ from uzex.interface import greeting, main_keyboard, menu_action, telegram_html
 from uzex.interface import text as ui_text
 from uzex.models import Answer
 from uzex.policy import (
+    asks_for_options,
     attach_csv,
     export_followup,
     file_preference,
@@ -42,6 +43,7 @@ from uzex.render import (
     file_summary,
     memory_text,
     render_answer,
+    render_options,
     render_sources,
     split_text,
     tr,
@@ -286,6 +288,11 @@ class Service:
         if hello:
             key, reply_language = hello
             return {"texts": [ui_text(key, reply_language)], "menu_at": 0, "ui_language": language}
+        if asks_for_options(text):
+            reply_language = guess_language(text)
+            if pending:
+                return {"texts": split_text(render_options(pending, reply_language))}
+            return {"texts": [ui_text("about", reply_language)]}
         if export_followup(text) and pending is None:
             previous = self.state.latest_answer(chat_id)
             if previous and previous.evidence and previous.evidence.rows:
