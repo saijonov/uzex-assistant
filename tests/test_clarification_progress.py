@@ -195,3 +195,167 @@ async def test_clarification_tool_cannot_repeat_the_same_question(sample_databas
     )
     assert answer.outcome == "unavailable"
     assert answer.reason == "needs_detail"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Shakar narxi qancha?",
+        "2025-yilda shakarning tonnasi necha pul?",
+        "sementning narxi",
+        "цена сахара",
+        "Цемент за тонну",
+        "paxta bo'yicha",
+        "nomida «сахар» bo‘lgan tovarlar",
+        "un narxi",
+        "мука",
+    ],
+)
+def test_named_products_are_recognised(sample_database, text):
+    assert sample_database.names_product(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "Narx qancha?",
+        "Narxi qancha?",
+        "Qaysi tovar?",
+        "2025-yilda nechta bitim bo'lgan?",
+        "Какая цена?",
+        "Сколько сделок?",
+        "kompaniya haqida",
+        "qancha pul",
+        "uning narxi",
+    ],
+)
+def test_ordinary_words_are_not_products(sample_database, text):
+    assert not sample_database.names_product(text)
+
+
+def test_a_named_product_is_not_asked_for_again():
+    review_ = price_review(reference="missing", entity_text=None)
+    assert missing_requirements(review_, "2025 Shakar narxi", [], None) == ["product"]
+    assert missing_requirements(review_, "2025 Shakar narxi", [], None, knows_product=True) == []
+
+
+def test_a_named_product_settles_a_vague_record_question():
+    review_ = price_review(task="count", subject="product", reference="missing", entity_text=None)
+    assert (
+        missing_requirements(review_, "2025 shakar bitimlari", [], None, knows_product=True) == []
+    )
+    company = price_review(task="count", subject="company", reference="missing", entity_text=None)
+    assert missing_requirements(company, "shakar sotuvchi", [], None, knows_product=True) == [
+        "entity"
+    ]
+
+
+def test_a_year_settles_the_period():
+    review_ = price_review(period="missing", missing_fields=["period"])
+    assert missing_requirements(review_, "2025-yilda Shakar narxi", [], None) == []
+    assert missing_requirements(review_, "Shakar narxi 01.03.2024", [], None) == []
+    assert missing_requirements(review_, "Shakar narxi", [], None) == ["period"]
+    whole = price_review(period="all_available")
+    assert missing_requirements(whole, "2025-yilda Shakar narxi", [], None) == []
+
+
+@pytest.mark.parametrize("task", ["rank", "list"])
+def test_rankings_and_lists_never_need_one_specific_record(task):
+    review_ = price_review(
+        task=task,
+        subject="deal",
+        reference="missing",
+        entity_text=None,
+        ranking_by="count",
+        missing_fields=["entity"],
+    )
+    assert missing_requirements(review_, "Eng qimmat bitim qaysi?", [], None) == []
+
+
+async def test_named_product_answers_instead_of_asking_which_product(sample_database):
+    client = ScriptedClient(
+        [
+            review(
+                language="uz",
+                task="price",
+                subject="product",
+                reference="missing",
+                period="specified",
+            ),
+            (
+                "query_registry",
+                {"sql": "SELECT COUNT(*) AS n FROM registry WHERE NOT is_cancelled"},
+            ),
+            finish(),
+        ]
+    )
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer(
+        "2025-yilda shakarning tonnasi necha pul?"
+    )
+    assert answer.outcome == "answer"
+
+
+async def test_no_preference_on_a_named_product_answers(sample_database):
+    client = ScriptedClient(
+        [
+            review(
+                language="uz",
+                task="price",
+                subject="product",
+                reference="missing",
+                period="missing",
+                missing_fields=["period"],
+                continuation=True,
+            ),
+            (
+                "query_registry",
+                {"sql": "SELECT COUNT(*) AS n FROM registry WHERE NOT is_cancelled"},
+            ),
+            finish(),
+        ]
+    )
+    pending = {"question": "Shakar narxi qancha?", "missing_fields": ["product"]}
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer(
+        "farqi yo'q", None, [], pending
+    )
+    assert answer.outcome == "answer"
+
+
+async def test_model_cannot_ask_about_a_region_the_user_named(sample_database):
+    client = ScriptedClient(
+        [
+            review(task="count"),
+            (
+                "ask_clarification",
+                {"language": "ru", "fields": ["region"], "candidates_query_id": None},
+            ),
+            ("query_registry", {"sql": TOSHKENT_SQL}),
+            finish(),
+        ]
+    )
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer(
+        "Сколько сделок в городе Ташкент?"
+    )
+    assert answer.outcome == "answer"
+
+
+async def test_broad_product_is_answered_instead_of_asking_which_variant(sample_database):
+    client = ScriptedClient(
+        [
+            review(task="price", subject="product", period="specified", language="uz"),
+            ("lookup_entities", {"kind": "product", "text": "sement"}),
+            (
+                "ask_clarification",
+                {"language": "uz", "fields": ["product"], "candidates_query_id": "lookup_1"},
+            ),
+            (
+                "query_registry",
+                {"sql": "SELECT COUNT(*) AS n FROM registry WHERE NOT is_cancelled"},
+            ),
+            finish(),
+        ]
+    )
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer(
+        "2025-yilda sement narxi qancha?"
+    )
+    assert answer.outcome == "answer"

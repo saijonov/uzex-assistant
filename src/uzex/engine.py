@@ -26,6 +26,7 @@ from uzex.policy import (
     cancellation_gap,
     missing_requirements,
     no_preference,
+    region_is_settled,
     repeats_question,
     settle_candidates,
     unavailable_request,
@@ -155,6 +156,7 @@ class Engine:
         review = None
         ambiguities = {}
         gap_reported = False
+        needless_question_rejected = False
         messages = [*history[-8:]]
         if pending:
             messages.append(
@@ -204,7 +206,14 @@ class Engine:
                                 reason=unavailable,
                                 continues_pending=review.continuation,
                             )
-                        missing = missing_requirements(review, question, history, pending)
+                        context = " ".join([question, (pending or {}).get("question", "")])
+                        missing = missing_requirements(
+                            review,
+                            question,
+                            history,
+                            pending,
+                            knows_product=self.database.names_product(context),
+                        )
                         known_record = None
                         number = bare_record_number(review, question, pending)
                         if number:
@@ -245,6 +254,22 @@ class Engine:
                         raise ValueError("review_request must run before other tools")
                     elif call.name == "ask_clarification":
                         clarification = AskClarification.model_validate(arguments)
+                        if not needless_question_rejected:
+                            context = " ".join([question, (pending or {}).get("question", "")])
+                            if "region" in clarification.fields and region_is_settled(context):
+                                needless_question_rejected = True
+                                raise ValueError(
+                                    "The user already named the region. Filter by it instead of asking."
+                                )
+                            if "product" in clarification.fields and self.database.names_product(
+                                context
+                            ):
+                                needless_question_rejected = True
+                                raise ValueError(
+                                    "The user named the product broadly. Do not ask which variant: "
+                                    "include every matching product_family value, or use "
+                                    "LOWER(product_name) LIKE."
+                                )
                         if (
                             clarification.candidates_query_id is not None
                             and clarification.candidates_query_id not in lookups

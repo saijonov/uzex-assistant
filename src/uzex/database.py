@@ -141,6 +141,31 @@ ENFORCED_VALUE_COLUMNS = {
     "participants": ("region", "name"),
     "brokers": ("region", "name"),
 }
+PRODUCT_DESCRIPTION_WORDS = {
+    "marka",
+    "razmer",
+    "sort",
+    "sorta",
+    "tip",
+    "klass",
+    "klassa",
+    "tovar",
+    "spot",
+    "forvard",
+    "fyuchers",
+    "pervyy",
+    "pervii",
+    "perviy",
+    "vtoroy",
+    "tretiy",
+    "visshiy",
+    "visshego",
+    "ne",
+    "mm",
+    "ii",
+    "iii",
+    "iv",
+}
 PRODUCT_ALIASES = {
     "shakar": "Сахар",
     "oq shakar": "Сахар белый",
@@ -373,10 +398,32 @@ class Database:
                 for table in sorted(TABLES & existing)
             }
             self.catalog = self._catalog(db)
+            self.product_words = self._product_words()
             self.values = self._column_values(db, PROMPT_VALUE_COLUMNS)
             self.known_values = {column: set(values) for column, values in self.values.items()}
             for column, values in self._column_values(db, ENFORCED_VALUE_COLUMNS).items():
                 self.known_values.setdefault(column, set()).update(values)
+
+    def _product_words(self) -> set[str]:
+        sources = [entry["name"] for entry in self.catalog["product"]]
+        sources += list(PRODUCT_ALIASES) + list(PRODUCT_ALIASES.values())
+        return {
+            word
+            for source in sources
+            for word in normalize(source).split()
+            if word.isalpha() and len(word) >= 2 and word not in PRODUCT_DESCRIPTION_WORDS
+        }
+
+    def names_product(self, text: str) -> bool:
+        for token in normalize(text).split():
+            if token in self.product_words:
+                return True
+            if len(token) >= 5 and any(
+                len(word) >= 4 and (token.startswith(word) or word.startswith(token))
+                for word in self.product_words
+            ):
+                return True
+        return False
 
     def _column_values(self, db, columns: dict[str, tuple[str, ...]]) -> dict[str, list[str]]:
         values: dict[str, list[str]] = {}

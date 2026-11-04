@@ -12,6 +12,7 @@ LIVE_PRICE_WORDS = re.compile(
     r"live|today|tomorrow)\b"
 )
 RECORD_NUMBER = re.compile(r"\b\d{6}\b")
+YEAR = re.compile(r"(?<!\d)20\d{2}(?!\d)")
 RECORD_KIND_WORDS = re.compile(
     r"\b(?:bitim\w*|sdelk\w*|sdelok|shartnoma\w*|kontrakt\w*|deal\w*|contract\w*)\b"
 )
@@ -139,7 +140,11 @@ def asks_for_options(question: str) -> bool:
 
 
 def missing_requirements(
-    review: RequestReview, question: str, history: list, pending: dict | None
+    review: RequestReview,
+    question: str,
+    history: list,
+    pending: dict | None,
+    knows_product: bool = False,
 ) -> list[str]:
     missing = list(review.missing_fields)
     if review.task == "list" and review.reference == "not_needed":
@@ -183,6 +188,17 @@ def missing_requirements(
         missing = [field for field in missing if field != "unit"]
     if region_is_settled(context):
         missing = [field for field in missing if field != "region"]
+    if YEAR.search(context):
+        missing = [field for field in missing if field != "period"]
+    if review.task in {"rank", "list"}:
+        missing = [field for field in missing if field not in {"entity", "reference", "product"}]
+    if knows_product:
+        missing = [
+            field
+            for field in missing
+            if field != "product"
+            and not (field == "entity" and review.subject in {"product", "market", "unknown"})
+        ]
     if pending:
         asked = set(pending.get("missing_fields") or []) if review.continuation else set()
         indifferent = no_preference(question)
