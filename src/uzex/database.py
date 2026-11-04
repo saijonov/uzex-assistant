@@ -601,10 +601,11 @@ class Database:
                         "expressions",
                         sqlglot.parse_one(
                             f"SELECT {records} AS n, min(deal_date), max(deal_date), "
-                            "list(DISTINCT currency), list(DISTINCT unit)"
+                            "list(DISTINCT currency), list(DISTINCT unit), "
+                            f"{records} FILTER (WHERE is_cancelled)"
                         ).expressions,
                     )
-                    count, start, end, currencies, units = db.execute(
+                    count, start, end, currencies, units, cancelled = db.execute(
                         scope.sql(dialect="duckdb")
                     ).fetchone()
                     grouped = {
@@ -667,7 +668,7 @@ class Database:
                 else:
                     scope.set("expressions", sqlglot.parse_one("SELECT count(*)").expressions)
                     count = db.execute(scope.sql(dialect="duckdb")).fetchone()[0]
-                    start = end = None
+                    start = end = cancelled = None
                     currencies = units = []
                     scope.set("expressions", [exp.Star()])
                 sample_result = db.execute(scope.limit(3).sql(dialect="duckdb"))
@@ -732,6 +733,7 @@ class Database:
                     row_limit=row_limit,
                     expressions=expressions,
                     selected_record_count=selected_count,
+                    cancelled_records=cancelled,
                     grouped=bool(selection_tree.args.get("group") or tree.find(exp.AggFunc)),
                     available_columns=[
                         column[0]

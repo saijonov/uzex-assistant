@@ -23,6 +23,7 @@ from uzex.models import (
 from uzex.policy import (
     answer_gap,
     bare_record_number,
+    cancellation_gap,
     missing_requirements,
     no_preference,
     repeats_question,
@@ -375,6 +376,14 @@ class Engine:
                                 raise ValueError("No-match claim contradicts returned data")
                             if finish.outcome == "answer" and empty:
                                 finish.outcome = "no_match"
+                            if finish.outcome == "answer":
+                                wrong_scope = cancellation_gap(
+                                    review,
+                                    " ".join([question, (pending or {}).get("question", "")]),
+                                    data,
+                                )
+                                if wrong_scope:
+                                    raise ValueError(wrong_scope)
                             gap = answer_gap(review, question, data)
                             if gap and finish.outcome == "answer" and not gap_reported:
                                 gap_reported = True

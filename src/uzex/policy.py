@@ -28,6 +28,15 @@ NUMBER_BEFORE_WORD = re.compile(rf"\b(?P<number>\d+){NUMBER_FILLER} {RECORD_WORD
 WORD_BEFORE_NUMBER = re.compile(
     rf"\b{RECORD_WORDS}{NUMBER_FILLER} (?P<number>\d+)\b{NOT_AN_IDENTIFIER}"
 )
+EXCLUDES_CANCELLED = re.compile(
+    r"bekor qilinmagan|bekor qilingan\w*siz\b|"
+    r"bekor qilingan\w*(?: \w+){0,2} (?:chiqar\w*|hisobga olma\w*|kiritma\w*|qoshma\w*|hisoblama\w*)|"
+    r"(?:\bbez(?: ucheta| uchyota)?|isklyuch\w*|\bkrome|ne schitaya|ne vklyuchaya|ne uchitivaya)"
+    r"(?: \w+)? (?:annul\w*|otmen\w*)|(?:annul\w*|otmen\w*)(?: \w+)? (?:isklyuch\w*|ne vklyuch\w*)"
+)
+MENTIONS_CANCELLED = re.compile(
+    r"\bbekor\b|\bannul\w*|\botmen\w*|\bcancel\w*|\bbarcha holat\w*|\bvse\w* sostoyan\w*"
+)
 PERCENT_WORDS = re.compile(r"\b(?:foiz\w*|ulush\w*|protsent\w*|dol[yiu]\w*)\b")
 AGGREGATE_EXPRESSION = re.compile(r"(?:COUNT|SUM|MIN|MAX|MEDIAN)\(", re.IGNORECASE)
 NO_PREFERENCE = re.compile(
@@ -211,6 +220,27 @@ def bare_record_number(review: RequestReview, question: str, pending: dict | Non
         return None
     match = RECORD_NUMBER.search(context)
     return match.group() if match else None
+
+
+def cancellation_gap(review: RequestReview, question: str, data) -> str | None:
+    if not data.cancelled_records:
+        return None
+    value = normalize(question)
+    if EXCLUDES_CANCELLED.search(value):
+        return (
+            f"The user asked to exclude cancelled deals, and this result counts "
+            f"{data.cancelled_records} of them. Add NOT is_cancelled to WHERE."
+        )
+    if (
+        review.task in {"turnover", "price"}
+        and review.subject not in {"deal", "contract"}
+        and not MENTIONS_CANCELLED.search(value)
+    ):
+        return (
+            f"Turnover and prices exclude cancelled deals by default, and this result counts "
+            f"{data.cancelled_records} of them. Add NOT is_cancelled to WHERE."
+        )
+    return None
 
 
 def answer_gap(review: RequestReview, question: str, data) -> str | None:

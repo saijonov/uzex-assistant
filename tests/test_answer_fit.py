@@ -4,6 +4,23 @@ from test_engine import ScriptedClient, finish, review
 from uzex.config import Settings
 from uzex.database import calculate_ratio
 from uzex.engine import Engine
+from uzex.models import RequestReview
+from uzex.policy import cancellation_gap
+
+
+def detail_review(**overrides):
+    values = {
+        "language": "uz",
+        "task": "count",
+        "subject": "deal",
+        "reference": "not_needed",
+        "entity_text": None,
+        "period": "not_needed",
+        "ranking_by": "not_needed",
+        "missing_fields": [],
+        "continuation": False,
+    }
+    return RequestReview(**{**values, **overrides})
 
 
 async def test_ranking_answer_must_name_who_was_ranked(sample_database):
@@ -138,3 +155,136 @@ async def test_model_recovers_from_comparing_a_measure_with_itself(sample_databa
     )
     assert answer.outcome == "answer"
     assert answer.evidence.rows[0]["ratio"] == "18.52"
+
+
+def raw_count(sample_database, sql):
+    with sample_database.connect() as db:
+        return db.execute(sql).fetchone()[0]
+
+
+@pytest.mark.parametrize(
+    "where,expected",
+    [
+        ("", "SELECT count(*) FROM registry WHERE is_cancelled"),
+        ("WHERE NOT is_cancelled", None),
+        ("WHERE is_cancelled", "SELECT count(*) FROM registry WHERE is_cancelled"),
+        (
+            "WHERE status <> 'Аннулирован(Не оплачен)'",
+            None,
+        ),
+    ],
+)
+def test_evidence_records_how_many_cancelled_deals_were_counted(sample_database, where, expected):
+    data = sample_database.query(f"SELECT COUNT(*) AS n FROM registry {where}", "q1")
+    assert data.cancelled_records == (raw_count(sample_database, expected) if expected else 0)
+
+
+def test_cancelled_count_does_not_apply_outside_deals(sample_database):
+    assert (
+        sample_database.query("SELECT COUNT(*) AS n FROM brokers", "q1").cancelled_records is None
+    )
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "2025-yilda bekor qilinganlarni chiqarib, barcha valyutalardagi bitimlar summasi",
+        "bekor qilinganlarsiz summa qancha?",
+        "bekor qilinganlarni hisobga olmang",
+        "bekor qilinmagan bitimlar summasi",
+        "Сумма без аннулированных сделок",
+        "Сумма без учёта аннулированных",
+        "исключая аннулированные",
+        "кроме отменённых сделок",
+        "не считая аннулированных",
+    ],
+)
+def test_requests_to_exclude_cancelled_are_recognised(sample_database, question):
+    data = sample_database.query(
+        "SELECT SUM(amount_uzs) AS s FROM registry WHERE is_cancelled", "q1"
+    )
+    assert cancellation_gap(detail_review(), question, data)
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "bekor qilingan bitimlar nechta?",
+        "Сколько аннулированных сделок?",
+        "bekor qilinganlar summasi qancha?",
+        "2025-yilda nechta bitim bo'lgan?",
+    ],
+)
+def test_other_questions_about_cancelled_deals_are_not_flagged(sample_database, question):
+    data = sample_database.query("SELECT COUNT(*) AS n FROM registry WHERE is_cancelled", "q1")
+    assert cancellation_gap(detail_review(), question, data) is None
+
+
+def test_excluding_cancelled_is_satisfied_by_any_correct_filter(sample_database):
+    for where in (
+        "NOT is_cancelled",
+        "status <> 'Аннулирован(Не оплачен)'",
+        "is_cancelled = FALSE",
+    ):
+        data = sample_database.query(f"SELECT COUNT(*) AS n FROM registry WHERE {where}", "q1")
+        assert cancellation_gap(detail_review(), "bekor qilinganlarsiz", data) is None
+
+
+def test_turnover_excludes_cancelled_by_default(sample_database):
+    data = sample_database.query("SELECT SUM(amount_uzs) AS s FROM registry", "q1")
+    turnover = detail_review(task="turnover", subject="market")
+    assert cancellation_gap(turnover, "2025-yil aylanmasi qancha?", data)
+    assert cancellation_gap(turnover, "Aylanma, bekor qilinganlar bilan birga", data) is None
+    assert cancellation_gap(turnover, "Оборот по всем состояниям", data) is None
+    assert cancellation_gap(detail_review(), "Nechta bitim?", data) is None
+
+
+def test_price_of_one_deal_may_be_a_cancelled_deal(sample_database):
+    data = sample_database.query("SELECT amount FROM registry WHERE is_cancelled LIMIT 1", "q1")
+    deal = detail_review(task="price", subject="deal")
+    assert cancellation_gap(deal, "bu bitim narxi qancha?", data) is None
+
+
+async def test_inverted_cancelled_filter_is_corrected_before_answering(sample_database):
+    client = ScriptedClient(
+        [
+            review(task="turnover", subject="market", language="uz"),
+            (
+                "query_registry",
+                {"sql": "SELECT SUM(amount_uzs) AS s FROM registry WHERE is_cancelled"},
+            ),
+            finish(),
+            (
+                "query_registry",
+                {"sql": "SELECT SUM(amount_uzs) AS s FROM registry WHERE NOT is_cancelled"},
+            ),
+            finish(query_id="q2"),
+        ]
+    )
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer(
+        "bekor qilinganlarni chiqarib, umumiy summa qancha?"
+    )
+    assert answer.outcome == "answer"
+    assert answer.evidence.cancelled_records == 0
+
+
+async def test_a_repeated_wrong_cancelled_filter_never_reaches_the_user(sample_database):
+    bad = (
+        "query_registry",
+        {"sql": "SELECT SUM(amount_uzs) AS s FROM registry WHERE is_cancelled"},
+    )
+    client = ScriptedClient(
+        [
+            review(task="turnover", subject="market", language="uz"),
+            bad,
+            finish(),
+            finish(),
+            finish(),
+        ]
+        + [finish()] * 3
+    )
+    answer = await Engine(Settings(_env_file=None), client, sample_database).answer(
+        "bekor qilinganlarsiz summa"
+    )
+    assert answer.outcome == "error"
+    assert answer.evidence is None

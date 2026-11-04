@@ -130,6 +130,7 @@ class Evidence(BaseModel):
     available_columns: list[str] = Field(default_factory=list)
     requested_count: int | None = None
     grouped: bool = False
+    cancelled_records: int | None = None
 
     @property
     def capped(self) -> bool:
