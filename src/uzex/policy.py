@@ -154,14 +154,23 @@ OPTION_TEXT = {
     "delivery": ("CSV fayl yoki matn.", "CSV-файл или текст."),
     "record_kind": ("bitim yoki shartnoma.", "сделка или контракт."),
 }
-OPTION_WORDS = re.compile(
-    r"\bvariant\w*|\bnima(?:ni)? yoz\w*|\bchto (?:mne )?(?:napisat|pisat|vvesti|ukazat)\b"
+WHAT_TO_TYPE = re.compile(r"\bnima(?:ni)? yoz\w*|\bchto (?:mne )?(?:napisat|pisat|vvesti|ukazat)\b")
+OPTION_WORD = re.compile(r"variant\w*")
+OPTION_FILLER = set(
+    "qanday qanaqa qaysi bor yana boshqa kakie kakoy est u vas mne a mumkin mojno".split()
 )
 
 
 def asks_for_options(question: str) -> bool:
     value = normalize(question)
-    return len(value.split()) <= 6 and bool(OPTION_WORDS.search(value))
+    tokens = value.split()
+    if len(tokens) > 6:
+        return False
+    if WHAT_TO_TYPE.search(value):
+        return True
+    return any(OPTION_WORD.fullmatch(token) for token in tokens) and all(
+        OPTION_WORD.fullmatch(token) or token in OPTION_FILLER for token in tokens
+    )
 
 
 def missing_requirements(
