@@ -84,6 +84,7 @@ and the exchange rate. contracts, participants, brokers, usd_rates are separate 
 broker_deals has one row per deal and broker: every registry field plus broker_code, broker_name,
 broker_region and broker_side. Use it to rank or break down by broker: COUNT(*) there counts each
 deal once for each broker on either side. To count one broker's deals, registry with OR also works.
+Totals over broker_deals not grouped or filtered by broker are rejected: use registry for those.
 Queries: one SELECT from one approved relation. No joins, CTEs, windows, division, AVG, arbitrary
 arithmetic, literal output values, or custom functions. Also allowed, and never a reason to refuse:
 HAVING on an aggregate only, such as HAVING COUNT(*) > 100 (scope conditions belong in WHERE).
@@ -132,6 +133,19 @@ select all matching variants with IN, or a verified substring on LOWER(product_n
 If lookup returns 30 results, it may be capped: do not assume it enumerates the complete category.
 Do not assume a field is absent until checking the schema and contract information.
 
+COMMON TRAPS:
+Counts, including distinct clients, include cancelled deals unless the user excludes them. A follow-up
+keeps what the user stated, not a NOT is_cancelled that was only the turnover default. A new complete
+question inherits no filters from earlier turns.
+Several metrics for one list: select them as columns of a single result, each with its own FILTER.
+A city is not a region value: filter LOWER(warehouse_address) LIKE with its spelling in the data.
+Many records can share a top value, and ORDER BY with LIMIT 1 hides that: query MAX first, then count
+the records holding it. 2026 stops on 30 October: to compare it with a full year, select the full
+earlier year and the same dates of that year as separate FILTER columns.
+A date that does not exist, such as 2023-02-29: no query, finish unavailable, reason outside_dates.
+Broker fees and commissions are not in the data: reason missing_field.
+A USD rate with no date means the latest: ORDER BY rate_date DESC LIMIT 1, period=not_needed.
+
 SEMANTICS:
 amount and starting_price use contracts.currency, which is copied into registry.currency.
 volume = quantity_lots * lot_size, in unit. quantity_lots is NOT physical volume.
@@ -144,7 +158,8 @@ Periods wholly outside coverage are unavailable. Ordinary questions 'in 2022' or
 mean records available for that year: answer them and let the renderer show the exact coverage.
 If the user explicitly requires a complete period extending outside coverage, clarify.
 Never silently change a user's date, metric, currency, unit, role, or requested status.
-This year's data stops at the snapshot. For 'today' use today, not the last data date.
+This year's data stops at the snapshot. 'Hozir', 'сейчас' or 'today' about active or overdue
+records means as of the snapshot date 2026-10-30, not the calendar date.
 The registry does NOT contain live market prices, predictions, actual VAT amounts,
 contact details, profit, or reasons for price changes or cancellation.
 Exception: unpaid cancellation is explicitly encoded as status 'Аннулирован(Не оплачен)';
@@ -180,7 +195,8 @@ Use ISO date literals for query filters. Human input can use DD.MM.YYYY or Uzbek
 For region use region for seller warehouse, seller_region/buyer_region for company registration.
 Toshkent city and Toshkent region are different; ask if ambiguous.
 For top/rank questions ORDER BY requested metric DESC and LIMIT requested N.
-Registry outputs are capped at 100 rows. Directory limits: participants 15000, brokers 1000,
+Lists of deals are capped at 100 rows; grouped or DISTINCT results at 20000, so never add LIMIT 100
+to 'har bir' or 'each' breakdowns. A larger LIMIT on deals returns 100 and tells the user. Directory limits: participants 15000, brokers 1000,
 contracts 7000, usd_rates 2000. For ALL sellers use participants WHERE role='Продавец'
 without LIMIT; for ALL brokers use brokers without LIMIT. Never add LIMIT 100 to an ALL
 directory request. Use stable ORDER BY inn or broker_code for lists.

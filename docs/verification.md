@@ -108,3 +108,9 @@ Production model run on `gpt-6.1-sol` with medium effort, covering 48 conversati
 The one failure was a false "name not found" for the inflected word `shakarning`. After that fix, six related conversations were rerun on the production model and all passed. The other 42 were not rerun after the last three small commits. The full 228 conversations have not been run on the production model, and no real Telegram account has tested this version. These are finite results, not a guarantee for unseen questions.
 
 An earlier production run in this round reported 0 of 48. That was a defect in the temporary test script, not in the application: a variable name clash made every request fail after its first model call.
+
+## Fixes after the 50-question review
+
+These changes were checked offline only, with no live model run and no real Telegram test: record numbers and amounts, wording about cancelled deals, VAT payers, all-time prices, questions about variants, casual greetings, broker totals that counted deals twice, row limits, product matching and new prompt rules.
+
+The prompt rules depend on the model following them, so they are not proven until tested live. Still open: day-name labels, subtraction and other calculator operations, chained results, sorting by a calculated value, top per group, days between dates, a converted dollar column and several results in one answer.
