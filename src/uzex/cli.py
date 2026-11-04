@@ -13,10 +13,29 @@ def main() -> None:
     ingest.add_argument("archive", type=Path)
     commands.add_parser("check")
     commands.add_parser("bot")
+    commands.add_parser("health")
+    commands.add_parser("install-service")
     ask = commands.add_parser("ask")
     ask.add_argument("question")
+    evaluate_parser = commands.add_parser("evaluate")
+    evaluate_parser.add_argument("--cases", type=Path, default=Path("evaluation/cases.json"))
+    evaluate_parser.add_argument("--output", type=Path, default=Path("reports/evaluation.json"))
+    evaluate_parser.add_argument("--limit", type=int)
+    evaluate_parser.add_argument("--category")
+    evaluate_parser.add_argument("--concurrency", type=int, default=2)
     args = parser.parse_args()
     settings = Settings()
+    if args.command == "health":
+        from uzex.health import health
+
+        result = health(settings)
+        print(json.dumps(result, indent=2))
+        raise SystemExit(0 if result["healthy"] else 1)
+    if args.command == "install-service":
+        from uzex.service import install_service
+
+        print(install_service(Path.cwd()))
+        return
     if args.command == "import":
         from uzex.ingest import import_archive
 
@@ -42,6 +61,21 @@ def main() -> None:
                 await engine.close()
 
         asyncio.run(run())
+    elif args.command == "evaluate":
+        from uzex.engine import Engine
+        from uzex.evaluate import evaluate
+
+        async def run_evaluation():
+            engine = Engine(settings)
+            try:
+                result = await evaluate(
+                    engine, args.cases, args.output, args.limit, args.concurrency, args.category
+                )
+                print(json.dumps(result, indent=2))
+            finally:
+                await engine.close()
+
+        asyncio.run(run_evaluation())
 
 
 if __name__ == "__main__":
