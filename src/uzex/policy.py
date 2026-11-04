@@ -11,6 +11,10 @@ LIVE_PRICE_WORDS = re.compile(
     r"\b(?:jonli|hozir\w*|bugun\w*|ertaga\w*|kelgusi|seychas|segodn\w*|tekush\w*|zavtra\w*|"
     r"live|today|tomorrow)\b"
 )
+ALL_TIME_WORDS = re.compile(
+    r"\b(?:hozirgacha|butun davr\w*|barcha davr\w*|hamma davr\w*|ves period\w*|za vsyo vremya|"
+    r"za vse vremya)\b"
+)
 RECORD_NUMBER = re.compile(r"\b\d{6}\b")
 YEAR = re.compile(r"(?<!\d)20\d{2}(?!\d)")
 RECORD_KIND_WORDS = re.compile(
@@ -368,7 +372,7 @@ def unavailable_request(review: RequestReview, question: str) -> str | None:
     price_request = (review.task == "price" and review.subject not in {"deal", "contract"}) or (
         review.task == "unsupported" and review.subject in {"product", "market"}
     )
-    if price_request and LIVE_PRICE_WORDS.search(value):
+    if price_request and LIVE_PRICE_WORDS.search(value) and not ALL_TIME_WORDS.search(value):
         if not re.search(r"\b20\d{2}\b", value) and not RECORD_NUMBER.search(value):
             return "outside_dates"
     return None
