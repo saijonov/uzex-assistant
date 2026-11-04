@@ -260,6 +260,43 @@ class Database:
         )
         return candidates[:30]
 
+    def sample(self, sql: str, count: int, query_id: str, timeout: float = 8) -> Evidence:
+        tree, table = validate_query(sql)
+        if not 1 <= count <= 100:
+            raise ValueError("Sample size must be between 1 and 100")
+        if tree.find(exp.AggFunc) or any(
+            tree.args.get(clause) for clause in ("group", "distinct", "order", "limit")
+        ):
+            raise ValueError(
+                "Sampling needs source fields and optional WHERE, without aggregates, ordering or limits"
+            )
+        key = {
+            "registry": "deal_id",
+            "contracts": "contract_id",
+            "participants": "inn",
+            "brokers": "broker_code",
+            "usd_rates": "rate_date",
+        }[table]
+        draw = tree.copy()
+        draw.set("expressions", [exp.column(key)])
+        draw = draw.order_by(exp.Rand()).limit(count)
+        with self.connect() as db:
+            timer = threading.Timer(timeout, db.interrupt)
+            timer.start()
+            try:
+                keys = [row[0] for row in db.execute(draw.sql(dialect="duckdb")).fetchall()]
+            finally:
+                timer.cancel()
+        if keys:
+            selected = exp.In(
+                this=exp.column(key), expressions=[exp.Literal.string(str(value)) for value in keys]
+            )
+        else:
+            selected = exp.false()
+        frozen = tree.where(selected).order_by(key).limit(count)
+        result = self.query(frozen.sql(dialect="duckdb"), query_id, timeout)
+        return result.model_copy(update={"selection": "random"})
+
     def query(self, sql: str, query_id: str, timeout: float = 8) -> Evidence:
         tree, table = validate_query(sql)
         row_limit = ROW_LIMITS[table]

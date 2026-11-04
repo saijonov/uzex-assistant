@@ -438,6 +438,8 @@ def render_answer(answer: Answer, page: int = 0) -> str:
                 f"{label(data.expressions.get(key, key), lang)}: {format_value(value, lang, field)}"
             )
     lines.append("")
+    if data.selection == "random":
+        lines.append(tr(("Tanlov: tasodifiy yozuvlar.", "Выборка: случайные записи."), lang))
     already_shows_date = len(data.rows) == 1 and any(
         source_field(value) == "deal_date" for value in data.expressions.values()
     )

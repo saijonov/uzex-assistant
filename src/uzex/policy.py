@@ -53,6 +53,10 @@ def missing_requirements(
     review: RequestReview, question: str, history: list, pending: dict | None
 ) -> list[str]:
     missing = list(review.missing_fields)
+    if review.task == "list" and review.reference == "not_needed":
+        missing = [field for field in missing if field not in {"entity", "reference", "product"}]
+        if review.period in {"all_available", "not_needed"}:
+            missing = [field for field in missing if field != "period"]
     if review.task == "unsupported":
         return []
     if review.task == "unknown":

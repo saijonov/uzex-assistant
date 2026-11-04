@@ -16,6 +16,10 @@ class Query(StrictModel):
     sql: str = Field(min_length=1, max_length=8000)
 
 
+class SampleQuery(Query):
+    count: int = Field(ge=1, le=100)
+
+
 MissingField = Literal[
     "entity",
     "product",
@@ -106,6 +110,7 @@ class Evidence(BaseModel):
     expressions: dict[str, str] = Field(default_factory=dict)
     selected_record_count: int | None = None
     row_limit: int = 100
+    selection: Literal["query", "random"] = "query"
 
 
 class Answer(BaseModel):

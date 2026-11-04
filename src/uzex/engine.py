@@ -9,7 +9,16 @@ from openai import AsyncOpenAI
 
 from uzex.config import Settings
 from uzex.database import Database, calculate_ratio, normalize
-from uzex.models import Answer, AskClarification, Calculation, Finish, Lookup, Query, RequestReview
+from uzex.models import (
+    Answer,
+    AskClarification,
+    Calculation,
+    Finish,
+    Lookup,
+    Query,
+    RequestReview,
+    SampleQuery,
+)
 from uzex.policy import missing_requirements, unavailable_request
 from uzex.prompt import instructions
 
@@ -52,6 +61,11 @@ TOOLS = [
         "query_registry",
         Query,
         "Execute one restricted read-only SELECT and return evidence with source rows.",
+    ),
+    tool(
+        "sample_records",
+        SampleQuery,
+        "Select up to 100 genuinely random source records. SQL specifies fields and optional filters from one approved relation, without ORDER BY, LIMIT, grouping or aggregates. No record IDs needed. Use SELECT * for complete details.",
     ),
     tool(
         "calculate_ratio",
@@ -230,14 +244,20 @@ class Engine:
                             "candidates": rows,
                             "may_be_truncated": len(rows) == 30,
                         }
-                    elif call.name == "query_registry":
+                    elif call.name in {"query_registry", "sample_records"}:
                         if ambiguities:
                             raise ValueError(
                                 f"Ambiguous entity lookups {list(ambiguities.values())}; ask_clarification instead of selecting a company or region yourself"
                             )
-                        query = Query.model_validate(arguments)
                         query_id = f"q{len(evidence) + 1}"
-                        data = await asyncio.to_thread(self.database.query, query.sql, query_id)
+                        if call.name == "sample_records":
+                            query = SampleQuery.model_validate(arguments)
+                            data = await asyncio.to_thread(
+                                self.database.sample, query.sql, query.count, query_id
+                            )
+                        else:
+                            query = Query.model_validate(arguments)
+                            data = await asyncio.to_thread(self.database.query, query.sql, query_id)
                         evidence[query_id] = data
                         output = data.model_dump(mode="json")
                         output["result_row_count"] = len(data.rows)

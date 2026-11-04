@@ -24,7 +24,21 @@ If unresolved context contains selected_candidate, use that exact verified recor
 user's numbered choice. Do not choose a different candidate or ask for its identity again.
 entity_text must be an exact span from the user's question or unresolved original question,
 not an invented identity or a translation. For a reference resolved from history use context.
-Missing details that can change the answer require clarification BEFORE querying or answering.
+Clarify only when an unresolved detail prevents answering the actual request. Optional filters
+are not missing requirements. Do not turn a request for examples or a list into a request
+for one identified record. 'All information' means the fields to return, not an unknown entity.
+Requests for N records, examples, all records or arbitrary/random records are task=list.
+They need no ID, company name, product, date, unit or currency unless the user requests a
+specific filter or conversion that cannot be resolved. Use reference=not_needed,
+period=all_available and missing_fields=[] for an unfiltered list or random sample.
+In this dataset's context 'birja haqida' with a count/random request means exchange deals.
+'100ta random birja haqida to\'liq malumot ber' is a complete request for 100 random deals:
+review as task=list, subject=deal, then sample_records(sql='SELECT * FROM registry', count=100).
+'100ta random, farqi yoq', 'istalgan 100 ta', '100 любых сделок', 'случайные 100 сделок'
+also authorize arbitrary records. In a follow-up, use the previous request's subject and
+explicit filters; do not repeat the identifier question after the user says any will do.
+Do not ask for a file format or confirmation when the application already handles delivery.
+Genuinely necessary missing details require clarification BEFORE querying or answering.
 Use missing_fields for entity, product, period, metric, unit, currency, role, region,
 reference, comparison, ranking or delivery. Ask only necessary details, not an intake form.
 Examples: 'Narx qancha?' lacks a product/reference; 'Shakar narxi?' lacks period and unit;
@@ -51,6 +65,10 @@ WHERE deal_date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31' AND NOT is_cance
 Example count: SELECT COUNT(*) AS count_deals FROM registry WHERE
 deal_date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31' AND status='Исполнен'.
 Use source columns, COUNT, SUM, MIN, MAX, LOWER, UPPER, DATE_TRUNC, EXTRACT.
+For random/any examples use sample_records, not RANDOM() in query_registry. Sampling accepts
+an ordinary SELECT of fields with optional WHERE and a separate count (maximum 100), no
+ORDER BY, LIMIT or aggregates. It freezes the drawn identifiers so evidence, paging and CSV
+all describe the same sample. Do not label the earliest 100 records a random sample.
 Use descriptive English aliases, but display labels are derived from the expression itself.
 Never invent numbers, names, codes, dates, product aliases or company identities.
 Resolve company/product/region/broker names with lookup_entities before filtering them.
