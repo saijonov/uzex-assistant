@@ -28,6 +28,7 @@ LABELS = {
     "buyer_activity": ("Xaridor faoliyati", "Вид деятельности покупателя"),
     "seller_broker_region": ("Sotuvchi brokeri hududi", "Регион брокера продавца"),
     "buyer_broker_region": ("Xaridor brokeri hududi", "Регион брокера покупателя"),
+    "group_count": ("Guruhlar soni", "Количество групп"),
     "broker_name": ("Broker", "Брокер"),
     "broker_region": ("Broker hududi", "Регион брокера"),
     "broker_side": ("Broker tomoni", "Сторона брокера"),
@@ -288,12 +289,16 @@ def label(expression: str, language: str) -> str:
                     + ": "
                     + tr(parts[part], language)
                 )
+        if isinstance(parsed, (exp.DateTrunc, exp.TimestampTrunc, exp.TimeToStr)):
+            field = parsed.this.sql(dialect="duckdb")
+            return f"{label(field, language)}: " + tr(("davr", "период"), language)
         if isinstance(parsed, exp.AggFunc):
             prefixes = {
                 "COUNT": ("Soni", "Количество"),
                 "SUM": ("Jami", "Итого"),
                 "MIN": ("Eng kichik", "Минимум"),
                 "MAX": ("Eng katta", "Максимум"),
+                "MEDIAN": ("Mediana", "Медиана"),
             }
             if isinstance(parsed.this, exp.Distinct):
                 fields = ", ".join(
@@ -507,7 +512,7 @@ def render_detail(row: dict, data: Evidence, language: str) -> list[str]:
 
 def render_calculation(data: Evidence, language: str) -> str:
     match = re.fullmatch(
-        r"(ratio|percentage|change_percent)\((\w+), (\w+)\); ROUND_HALF_UP, (\d) decimals",
+        r"(ratio|percentage|change_percent|share_percent)\((\w+), (\w+)\); ROUND_HALF_UP, (\d) decimals",
         data.calculation or "",
     )
     if not match:
@@ -520,6 +525,8 @@ def render_calculation(data: Evidence, language: str) -> str:
         formula += " × 100%"
     elif operation == "change_percent":
         formula = f"(({n}) − ({d})) ÷ ({d}) × 100%"
+    elif operation == "share_percent":
+        formula = f"({n}) ÷ ({tr(('jami', 'итог'), language)}: {n}) × 100%"
     precision = tr(
         (f"{scale} kasr xonasigacha yaxlitlangan", f"округлено до {scale} знаков"), language
     )
@@ -598,6 +605,16 @@ def render_answer(answer: Answer, page: int = 0) -> str:
     lines.append("")
     if data.selection == "random":
         lines.append(tr(("Tanlov: tasodifiy yozuvlar.", "Выборка: случайные записи."), lang))
+    if data.requested_count:
+        lines.append(
+            tr(
+                (
+                    f"So‘ralgan {data.requested_count} ta, lekin bitta javobda {len(data.rows)} tagacha beriladi.",
+                    f"Запрошено {data.requested_count}, но в одном ответе выдаётся до {len(data.rows)}.",
+                ),
+                lang,
+            )
+        )
     already_shows_date = len(data.rows) == 1 and any(
         source_field(value) == "deal_date" for value in data.expressions.values()
     )

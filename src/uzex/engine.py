@@ -21,6 +21,7 @@ from uzex.models import (
     SampleQuery,
 )
 from uzex.policy import (
+    bare_record_number,
     missing_requirements,
     no_preference,
     repeats_question,
@@ -72,7 +73,7 @@ TOOLS = [
     tool(
         "sample_records",
         SampleQuery,
-        "Select up to 100 genuinely random source records. SQL specifies fields and optional filters from one approved relation, without ORDER BY, LIMIT, grouping or aggregates. No record IDs needed. Use SELECT * for complete details.",
+        "Select genuinely random source records. Pass the number the user asked for; the application returns at most 100 and tells the user. SQL specifies fields and optional filters from one approved relation, without ORDER BY, LIMIT, grouping or aggregates. No record IDs needed. Use SELECT * for complete details.",
     ),
     tool(
         "calculate_ratio",
@@ -201,6 +202,15 @@ class Engine:
                                 continues_pending=review.continuation,
                             )
                         missing = missing_requirements(review, question, history, pending)
+                        known_record = None
+                        number = bare_record_number(review, question, pending)
+                        if number:
+                            kinds = await asyncio.to_thread(self.database.record_kinds, number)
+                            if len(kinds) == 2:
+                                missing = ["record_kind"]
+                            elif kinds:
+                                missing = [f for f in missing if f not in {"entity", "reference"}]
+                                known_record = f"{number} exists only as a {kinds[0]}."
                         if repeats_question(missing, pending, review.continuation):
                             return Answer(
                                 outcome="unavailable",
@@ -220,6 +230,8 @@ class Engine:
                             "task": review.task,
                             "instruction": "Use data tools; ask_clarification if lookup or query reveals ambiguity.",
                         }
+                        if known_record:
+                            output["record"] = known_record
                         if pending and (no_preference(question) or review.missing_fields):
                             output["defaults"] = (
                                 "Do not ask again. Where the user gave no value, use all available "
@@ -322,8 +334,10 @@ class Engine:
                         if call.name == "sample_records":
                             query = SampleQuery.model_validate(arguments)
                             data = await asyncio.to_thread(
-                                self.database.sample, query.sql, query.count, query_id
+                                self.database.sample, query.sql, min(query.count, 100), query_id
                             )
+                            if query.count > 100:
+                                data = data.model_copy(update={"requested_count": query.count})
                         else:
                             query = Query.model_validate(arguments)
                             data = await asyncio.to_thread(self.database.query, query.sql, query_id)

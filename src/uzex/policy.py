@@ -7,6 +7,14 @@ OPTIONAL_FIELDS = {"period", "unit", "currency", "ranking", "role", "region"}
 UNIT_WORDS = re.compile(
     r"\b(?:kg|kilo\w*|tonn\w*|litr\w*|dona\w*|sht|shtuk\w*|metr\w*|kubometr\w*|kub|kvadrat\w*|lot\w*)\b"
 )
+LIVE_PRICE_WORDS = re.compile(
+    r"\b(?:jonli|hozir\w*|bugun\w*|ertaga\w*|kelgusi|seychas|segodn\w*|tekush\w*|zavtra\w*|"
+    r"live|today|tomorrow)\b"
+)
+RECORD_NUMBER = re.compile(r"\b\d{6}\b")
+RECORD_KIND_WORDS = re.compile(
+    r"\b(?:bitim\w*|sdelk\w*|sdelok|shartnoma\w*|kontrakt\w*|deal\w*|contract\w*)\b"
+)
 NO_PREFERENCE = re.compile(
     r"\b(?:farqi? (?:yoq|yuq)|farq qilmaydi|bilmadim|bilmayman|istalgan\w*|ahamiyati yoq|"
     r"nevajno|vse ravno|bez raznitsi|ne znayu|lyub\w*|any|dont know|doesnt matter)\b"
@@ -54,6 +62,10 @@ CLARIFICATION_TEXT = {
     "delivery": (
         "CSV fayl yuboraymi yoki natijani matnda ko‘rsataymi?",
         "Отправить CSV или показать результат текстом?",
+    ),
+    "record_kind": (
+        "Bu raqam bilan ham bitim, ham shartnoma bor. Qaysi biri kerak?",
+        "С этим номером есть и сделка, и контракт. Что нужно?",
     ),
 }
 
@@ -118,6 +130,16 @@ def missing_requirements(
     return missing[:2]
 
 
+def bare_record_number(review: RequestReview, question: str, pending: dict | None) -> str | None:
+    if review.subject in {"deal", "contract"}:
+        return None
+    context = " ".join([question, (pending or {}).get("question", "")])
+    if RECORD_KIND_WORDS.search(normalize(context)):
+        return None
+    match = RECORD_NUMBER.search(context)
+    return match.group() if match else None
+
+
 def no_preference(question: str) -> bool:
     return bool(NO_PREFERENCE.search(normalize(question)))
 
@@ -155,13 +177,11 @@ def settle_candidates(
 
 def unavailable_request(review: RequestReview, question: str) -> str | None:
     value = normalize(question)
-    price_request = review.task == "price" or (
+    price_request = (review.task == "price" and review.subject not in {"deal", "contract"}) or (
         review.task == "unsupported" and review.subject in {"product", "market"}
     )
-    if price_request and re.search(
-        r"\b(jonli|hozir|bugun|ertaga|seychas|segodnya|zavtra|live|today|tomorrow)\b", value
-    ):
-        if not re.search(r"\b20\d{2}\b", value):
+    if price_request and LIVE_PRICE_WORDS.search(value):
+        if not re.search(r"\b20\d{2}\b", value) and not RECORD_NUMBER.search(value):
             return "outside_dates"
     return None
 

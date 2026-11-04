@@ -17,7 +17,7 @@ class Query(StrictModel):
 
 
 class SampleQuery(Query):
-    count: int = Field(ge=1, le=100)
+    count: int = Field(ge=1)
 
 
 MissingField = Literal[
@@ -33,6 +33,7 @@ MissingField = Literal[
     "comparison",
     "ranking",
     "delivery",
+    "record_kind",
 ]
 
 
@@ -85,7 +86,7 @@ class Calculation(StrictModel):
     numerator: str
     denominator: str
     scale: int = Field(ge=0, le=6)
-    operation: Literal["ratio", "percentage", "change_percent"]
+    operation: Literal["ratio", "percentage", "change_percent", "share_percent"]
 
 
 class Finish(StrictModel):

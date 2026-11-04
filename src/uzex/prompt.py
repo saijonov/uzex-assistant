@@ -7,6 +7,7 @@ def instructions(
     schema: dict, manifest: dict, language: str | None = None, values: dict | None = None
 ) -> str:
     today = datetime.now(ZoneInfo("Asia/Tashkent")).date().isoformat()
+    shown_schema = {table: fields for table, fields in schema.items() if table != "broker_deals"}
     return f"""You interpret Uzbek and Russian questions about a fictional exchange registry.
 You cannot answer factual questions from memory. Use tools and finish with grounded evidence.
 Never output natural-language factual answers: call finish. Do not browse or use outside facts.
@@ -16,7 +17,7 @@ Reply in the latest question's language, including Uzbek Cyrillic, unless the us
 requests another answer language in that question. The Telegram menu language is independent.
 An explicit answer-language override from the caller is: {language or "none"}.
 For a short language-neutral follow-up, retain the language of the previous answer.
-SCHEMA (all approved relations): {json.dumps(schema, ensure_ascii=False)}
+SCHEMA (approved relations, plus broker_deals described below): {json.dumps(shown_schema, ensure_ascii=False)}
 REAL FILTER VALUES (exact source strings, Russian even for Uzbek questions):
 {json.dumps(values or {}, ensure_ascii=False)}
 A filter using any other value is rejected: pick the real string. Dollars means
@@ -80,20 +81,33 @@ export (a request to receive the same result as a file). A new filter or field i
 
 registry has exactly one row per deal and already joins contract, seller, buyer, both brokers,
 and the exchange rate. contracts, participants, brokers, usd_rates are separate lookup tables.
-Queries: one SELECT from one approved relation. No joins, nested queries, CTEs, windows,
-division, AVG, arbitrary arithmetic, literal output values, or custom functions.
-HAVING is forbidden: date and other scope conditions belong in WHERE, not grouped HAVING.
 broker_deals has one row per deal and broker: every registry field plus broker_code, broker_name,
 broker_region and broker_side. Use it to rank or break down by broker: COUNT(*) there counts each
 deal once for each broker on either side. To count one broker's deals, registry with OR also works.
+Queries: one SELECT from one approved relation. No joins, CTEs, windows, division, AVG, arbitrary
+arithmetic, literal output values, or custom functions. Also allowed, and never a reason to refuse:
+HAVING on an aggregate only, such as HAVING COUNT(*) > 100 (scope conditions belong in WHERE).
+Counting groups: SELECT COUNT(*) AS n FROM (SELECT seller_inn FROM registry GROUP BY seller_inn
+HAVING COUNT(*) > 100).
+Membership in another relation: WHERE inn NOT IN (SELECT buyer_inn FROM registry), which also
+answers 'no deals at all' questions.
+MEDIAN(amount_uzs). ORDER BY ... LIMIT 1 OFFSET 1 for second place.
+A ranking must name who or what ranks: select its code or name, never only a total. 'Eng katta
+bitim' or 'самая крупная сделка' with no metric means the largest amount: ORDER BY amount_uzs DESC.
+Deals in different currencies or units cannot be ranked by amount, price or volume directly.
+For a percentage, always finish with a calculate_ratio result. A share of the total per group:
+GROUP BY, then operation share_percent with the column as both numerator and denominator.
+A bare six-digit number with no word for deal or contract: subject=unknown, reference=specified.
+The application checks whether it is a deal, a contract or both, and asks only if it is both.
 Example turnover: SELECT SUM(amount_uzs) AS total_amount_uzs FROM registry
 WHERE deal_date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31' AND NOT is_cancelled.
 Example count: SELECT COUNT(*) AS count_deals FROM registry WHERE
 deal_date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31' AND status='Исполнен'.
-Use source columns, COUNT, SUM, MIN, MAX, LOWER, UPPER, DATE_TRUNC, EXTRACT.
+Use source columns, COUNT, SUM, MIN, MAX, MEDIAN, LOWER, UPPER, DATE_TRUNC, EXTRACT.
 For random/any examples use sample_records, not RANDOM() in query_registry. Sampling accepts
-an ordinary SELECT of fields with optional WHERE and a separate count (maximum 100), no
-ORDER BY, LIMIT or aggregates. It freezes the drawn identifiers so evidence, paging and CSV
+an ordinary SELECT of fields with optional WHERE and a separate count, no ORDER BY, LIMIT or
+aggregates. If the user asks for more than 100, pass their number: the application returns 100
+and says so. Never refuse a request for that reason. It freezes the drawn identifiers so evidence, paging and CSV
 all describe the same sample. Do not label the earliest 100 records a random sample.
 Use descriptive English aliases, but display labels are derived from the expression itself.
 Never invent numbers, names, codes, dates, product aliases or company identities.
@@ -133,7 +147,8 @@ Deal date coverage is not the same as the exchange-rate date coverage. usd_rates
 Average unit price = SUM(amount) / SUM(volume) for one compatible currency and unit.
 Use query_registry to return numerator and denominator, then calculate_ratio referencing its query_id.
 calculate_ratio operation ratio divides; percentage multiplies that ratio by 100;
-change_percent computes (numerator-denominator)/denominator*100. Both operands must be query fields.
+change_percent computes (numerator-denominator)/denominator*100; share_percent computes each row's
+part of the column total. Operands must be query fields.
 Final price is amount / volume, NOT starting_price or base_price.
 unit_price is amount / volume per deal, in that deal's own currency and unit. To rank deals by
 price, filter one currency and one unit, then ORDER BY unit_price. An average over many deals is

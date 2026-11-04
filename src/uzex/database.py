@@ -15,6 +15,15 @@ from uzex.models import Evidence
 
 TABLES = {"registry", "broker_deals", "contracts", "participants", "brokers", "usd_rates"}
 DEAL_TABLES = {"registry", "broker_deals"}
+CURRENCY_COLUMNS = {"amount", "starting_price", "base_price", "unit_price"}
+UNIT_COLUMNS = {
+    "volume",
+    "delivered_volume",
+    "lot_size",
+    "starting_price",
+    "base_price",
+    "unit_price",
+}
 ROW_LIMITS = {
     "registry": 100,
     "broker_deals": 100,
@@ -41,6 +50,9 @@ FUNCTIONS = {
     "TRY_CAST",
     "ABS",
     "ROUND",
+    "MEDIAN",
+    "TIMESTAMP_TRUNC",
+    "TIME_TO_STR",
     "ROW_NUMBER",
     "RANK",
     "DENSE_RANK",
@@ -217,6 +229,11 @@ def serial(value):
     return value
 
 
+def derived_source(tree: exp.Select) -> exp.Expression | None:
+    source = tree.args.get("from_")
+    return source.this.this if source and isinstance(source.this, exp.Subquery) else None
+
+
 def validate_query(sql: str) -> tuple[exp.Select, str]:
     if len(sql) > 8000:
         raise ValueError("Query too long")
@@ -224,25 +241,78 @@ def validate_query(sql: str) -> tuple[exp.Select, str]:
     if len(statements) != 1 or not isinstance(statements[0], exp.Select):
         raise ValueError("Exactly one SELECT is allowed")
     tree = statements[0]
-    allowed_clauses = {"expressions", "from_", "where", "group", "order", "limit", "distinct"}
+    inner = derived_source(tree)
+    if inner is None:
+        return tree, validate_select(tree)
+    projection = tree.expressions[0] if len(tree.expressions) == 1 else None
+    projection = projection.this if isinstance(projection, exp.Alias) else projection
+    if (
+        any(value and key not in {"expressions", "from_"} for key, value in tree.args.items())
+        or not isinstance(projection, exp.Count)
+        or not isinstance(projection.this, exp.Star)
+        or not isinstance(inner, exp.Select)
+    ):
+        raise ValueError("The only allowed FROM subquery is SELECT COUNT(*) FROM (grouped SELECT)")
+    return tree, validate_select(inner)
+
+
+def validate_membership_subquery(select: exp.Select, root: exp.Select) -> None:
+    subquery = select.parent
+    if not isinstance(subquery, exp.Subquery) or not isinstance(subquery.parent, exp.In):
+        raise ValueError("Nested queries are only allowed as column IN (SELECT column FROM table)")
+    if subquery.find_ancestor(exp.Where) is not root.args.get("where"):
+        raise ValueError("A membership subquery belongs in the main WHERE")
+    if any(
+        value and key not in {"expressions", "from_", "where"} for key, value in select.args.items()
+    ):
+        raise ValueError("A membership subquery may only select a column with optional WHERE")
+    source = select.args.get("from_")
+    if (
+        len(select.expressions) != 1
+        or not isinstance(select.expressions[0], exp.Column)
+        or source is None
+        or not isinstance(source.this, exp.Table)
+    ):
+        raise ValueError("A membership subquery selects one column from one approved table")
+
+
+def validate_select(tree: exp.Select) -> str:
+    allowed_clauses = {
+        "expressions",
+        "from_",
+        "where",
+        "group",
+        "having",
+        "order",
+        "limit",
+        "offset",
+        "distinct",
+    }
     if any(value and key not in allowed_clauses for key, value in tree.args.items()):
         raise ValueError("Unsupported SELECT clause; use WHERE filters and ordinary grouping")
     if tree.args.get("with_") or tree.args.get("joins") or tree.args.get("into"):
         raise ValueError("Use one approved view without joins, CTEs or INTO")
-    if tree.args.get("having"):
-        raise ValueError("Put scope filters in WHERE, not HAVING, so evidence matches the answer")
-    if len(list(tree.find_all(exp.Select))) != 1 or tree.find(exp.Subquery):
-        raise ValueError("Nested queries are not allowed")
-    tables = list(tree.find_all(exp.Table))
-    if len(tables) != 1 or tables[0].name not in TABLES:
+    having = tree.args.get("having")
+    if having and not having.find(exp.AggFunc):
+        raise ValueError("Put scope filters in WHERE; HAVING may only test an aggregate")
+    source = tree.args.get("from_")
+    if source is None or not isinstance(source.this, exp.Table):
         raise ValueError("Use exactly one approved table")
-    table = tables[0]
-    if not isinstance(table.this, exp.Identifier) or table.db or table.catalog:
-        raise ValueError("External and qualified sources are forbidden")
-    if any(value and key not in {"this", "alias"} for key, value in table.args.items()):
-        raise ValueError("Table transformations and sampling are forbidden")
-    if tree.args.get("offset") or tree.find(exp.Window):
-        raise ValueError("Offsets and window functions are unsupported")
+    for select in tree.find_all(exp.Select):
+        if select is not tree:
+            validate_membership_subquery(select, tree)
+    for table in tree.find_all(exp.Table):
+        if table.name not in TABLES:
+            raise ValueError("Use only approved tables")
+        if not isinstance(table.this, exp.Identifier) or table.db or table.catalog:
+            raise ValueError("External and qualified sources are forbidden")
+        if any(value and key not in {"this", "alias"} for key, value in table.args.items()):
+            raise ValueError("Table transformations and sampling are forbidden")
+    table = source.this
+    if tree.find(exp.Window):
+        raise ValueError("Window functions are unsupported")
+    if tree.args.get("offset") and not (tree.args.get("limit") and tree.args.get("order")):
+        raise ValueError("OFFSET needs both ORDER BY and LIMIT")
     for node in tree.walk():
         if isinstance(node, (exp.Div, exp.IntDiv, exp.Mod, exp.Pow, exp.Add, exp.Sub, exp.Mul)):
             raise ValueError("Use calculate_ratio for division; other arithmetic is unsupported")
@@ -282,7 +352,7 @@ def validate_query(sql: str) -> tuple[exp.Select, str]:
             raise ValueError("Limit must be an integer") from error
         if not 1 <= limit_value <= ROW_LIMITS[table.name]:
             raise ValueError(f"Limit must be between 1 and {ROW_LIMITS[table.name]}")
-    return tree, table.name
+    return table.name
 
 
 class Database:
@@ -354,6 +424,17 @@ class Database:
                         f"No record has {target.name} matching {operand.name!r}. {hint}. "
                         "Correct the filter; this rejection is not evidence of absence."
                     )
+
+    def record_kinds(self, number: str) -> list[str]:
+        with self.connect() as db:
+            kinds = []
+            if db.execute("SELECT 1 FROM deals WHERE deal_id = ? LIMIT 1", [number]).fetchone():
+                kinds.append("deal")
+            if db.execute(
+                "SELECT 1 FROM contracts WHERE contract_id = ? LIMIT 1", [number]
+            ).fetchone():
+                kinds.append("contract")
+        return kinds
 
     def connect(self):
         return duckdb.connect(
@@ -479,14 +560,19 @@ class Database:
                     for row in result.fetchmany(row_limit + 1)
                 ]
                 expressions = {}
+                inner = derived_source(tree)
                 for index, item in enumerate(tree.expressions):
+                    if inner is not None:
+                        expressions[columns[index]] = "group_count"
+                        break
                     if isinstance(item, exp.Star):
                         expressions.update({column: column for column in columns})
                         break
                     expression = item.this if isinstance(item, exp.Alias) else item
                     expressions[columns[index]] = expression.sql(dialect="duckdb")
-                scope = tree.copy()
-                for key in ("group", "having", "order", "limit", "distinct"):
+                selection_tree = inner if inner is not None else tree
+                scope = selection_tree.copy()
+                for key in ("group", "having", "order", "limit", "offset", "distinct"):
                     scope.set(key, None)
                 if table in DEAL_TABLES:
                     records = "count(DISTINCT deal_id)" if table == "broker_deals" else "count(*)"
@@ -503,31 +589,48 @@ class Database:
                     grouped = {
                         column.name
                         for group in (
-                            tree.args["group"].expressions if tree.args.get("group") else []
+                            selection_tree.args["group"].expressions
+                            if selection_tree.args.get("group")
+                            else []
                         )
                         for column in group.find_all(exp.Column)
                     }
                     aggregate_columns = {
                         col.name
-                        for aggregate in tree.find_all(exp.AggFunc)
+                        for aggregate in selection_tree.find_all(exp.AggFunc)
                         for col in aggregate.find_all(exp.Column)
                     }
                     if (
                         len(currencies or []) > 1
-                        and aggregate_columns & {"amount", "starting_price", "base_price"}
+                        and aggregate_columns & CURRENCY_COLUMNS
                         and "currency" not in grouped
                     ):
                         raise ValueError("Mixed currencies: group by currency or use amount_uzs")
                     if (
                         len(units or []) > 1
-                        and aggregate_columns
-                        & {"volume", "delivered_volume", "lot_size", "starting_price", "base_price"}
+                        and aggregate_columns & UNIT_COLUMNS
                         and "unit" not in grouped
                     ):
                         raise ValueError(
                             "Mixed units: group by unit or use mass_kg for kg/tonne only"
                         )
-                    if aggregate_columns & {"mass_kg", "delivered_mass_kg"} and set(units or []) - {
+                    ordered = {
+                        column.name
+                        for item in (
+                            tree.args["order"].expressions if tree.args.get("order") else []
+                        )
+                        for column in item.find_all(exp.Column)
+                    }
+                    if not grouped:
+                        if len(currencies or []) > 1 and ordered & CURRENCY_COLUMNS:
+                            raise ValueError(
+                                "Mixed currencies cannot be ranked: ORDER BY amount_uzs or filter one currency"
+                            )
+                        if len(units or []) > 1 and ordered & UNIT_COLUMNS:
+                            raise ValueError("Mixed units cannot be ranked: filter one unit")
+                    if aggregate_columns & {"mass_kg", "mass_t", "delivered_mass_kg"} and set(
+                        units or []
+                    ) - {
                         "килограмм",
                         "тонна",
                     }:
@@ -608,6 +711,7 @@ class Database:
                     row_limit=row_limit,
                     expressions=expressions,
                     selected_record_count=selected_count,
+                    grouped=bool(selection_tree.args.get("group") or tree.find(exp.AggFunc)),
                     available_columns=[
                         column[0]
                         for column in self.schema[table]
@@ -623,21 +727,38 @@ def calculate_ratio(
 ) -> Evidence:
     if not evidence.rows or not 0 <= scale <= 6:
         raise ValueError("A nonempty query and scale between 0 and 6 are required")
+    total = None
+    if operation == "share_percent":
+        if evidence.capped:
+            raise ValueError("A share of the total needs the complete result, not a capped one")
+        if numerator not in evidence.rows[0]:
+            raise ValueError("Calculation fields must exist in the cited result")
+        with localcontext() as context:
+            context.prec = 50
+            total = sum(
+                (
+                    Decimal(str(row[numerator]))
+                    for row in evidence.rows
+                    if row[numerator] is not None
+                ),
+                Decimal(0),
+            )
     rows = []
     for row in evidence.rows:
-        if numerator not in row or denominator not in row:
+        if numerator not in row or (total is None and denominator not in row):
             raise ValueError("Calculation fields must exist in the cited result")
-        if row[numerator] is None or row[denominator] is None:
+        if row[numerator] is None or (total is None and row[denominator] is None):
             value = None
         else:
             with localcontext() as context:
                 context.prec = 50
-                n, d = Decimal(str(row[numerator])), Decimal(str(row[denominator]))
+                n = Decimal(str(row[numerator]))
+                d = total if total is not None else Decimal(str(row[denominator]))
                 if not n.is_finite() or not d.is_finite() or d == 0:
                     value = None
                 else:
                     ratio = (n - d) / d if operation == "change_percent" else n / d
-                    if operation in {"percentage", "change_percent"}:
+                    if operation in {"percentage", "change_percent", "share_percent"}:
                         ratio *= 100
                     value = str(ratio.quantize(Decimal(1).scaleb(-scale), rounding=ROUND_HALF_UP))
         rows.append({**row, "ratio": value})
