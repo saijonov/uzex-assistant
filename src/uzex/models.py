@@ -57,7 +57,7 @@ class RequestReview(StrictModel):
     reference: Literal["specified", "context", "not_needed", "missing"]
     entity_text: str | None
     period: Literal["specified", "context", "all_available", "not_needed", "missing"]
-    ranking_by: Literal["count", "amount", "volume", "not_needed", "missing"]
+    ranking_by: Literal["count", "amount", "volume", "other", "not_needed", "missing"]
     missing_fields: list[MissingField]
     continuation: bool
 

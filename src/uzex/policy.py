@@ -58,9 +58,22 @@ EXCLUDES_CANCELLED = re.compile(
     r"(?: \w+)? (?:annul\w*|otmen\w*)|(?:annul\w*|otmen\w*)(?: \w+)? (?:isklyuch\w*|ne vklyuch\w*)"
 )
 KEEPS_CANCELLED = re.compile(r"chiqar\w* tashlama\w*|chiqarma\w*|\bne isklyuch\w*|\bne vichit\w*")
+CANCEL_WORDS = r"\bbekor\b|\bannul\w*|\botmen\w*|\bcancel\w*|\bbarcha holat\w*|\bvse\w* sostoyan\w*"
+UNPAID_WORDS = r"\btolanmagan\w*|\bneoplach\w*|\bneoplat\w*"
+NAMES_CANCELLED = re.compile(CANCEL_WORDS)
+NAMES_UNPAID = re.compile(UNPAID_WORDS)
 MENTIONS_CANCELLED = re.compile(
-    r"\bbekor\b|\bannul\w*|\botmen\w*|\bcancel\w*|\bbarcha holat\w*|\bvse\w* sostoyan\w*|"
-    r"\btolanmagan\w*|\bneoplach\w*|\bneoplat\w*|\bsotilmay\w*|\bsotilmagan\w*|\bneprodan\w*"
+    rf"{CANCEL_WORDS}|{UNPAID_WORDS}|\bsotilmay\w*|\bsotilmagan\w*|\bneprodan\w*"
+)
+TIME_WORDS = re.compile(
+    r"\b(?:yil\w*|oy\w*|kun\w*|hafta\w*|chorak\w*|sana\w*|davr\w*|god\w*|mesyats\w*|kvartal\w*|"
+    r"den\w*|dnya|dni|nedel\w*|period\w*|data\w*|bugun\w*|kecha\w*|segodn\w*|vchera|yanvar\w*|"
+    r"fevral\w*|mart\w*|aprel\w*|may\w*|iyun\w*|iyul\w*|avgust\w*|sent\w*br\w*|okt\w*br\w*|"
+    r"noyabr\w*|dekabr\w*|20\d{2})\b"
+)
+FOLLOW_UP_WORDS = re.compile(
+    r"\b(?:shu\w*|ular\w*|osha\w*|nechtasi\w*|qanchasi\w*|yana|ham|chi|eti\w*|etot|eta|iz nix|u nix|"
+    r"tam|tut)\b"
 )
 MONEY_MEASURE = re.compile(
     r"\b(?:amount|amount_uzs|amount_usd|volume|delivered_volume|mass_kg|mass_t|unit_price)\b"
@@ -69,6 +82,10 @@ PER_KILOGRAM = re.compile(r"\b(?:kg|kilo\w*)\b")
 PER_TONNE = re.compile(r"\btonn\w*\b")
 PERCENT_WORDS = re.compile(r"\b(?:foiz\w*|ulush\w*|protsent\w*|dol[yiu]\w*)\b")
 AGGREGATE_EXPRESSION = re.compile(r"(?:COUNT|SUM|MIN|MAX|MEDIAN)\(", re.IGNORECASE)
+NAMED_METRIC = re.compile(
+    r"\b(?:garov\w*|zalog\w*|depozit\w*|foiz\w*|ulush\w*|protsent\w*|dol[yiu]\w*|narx\w*|tsen\w*|"
+    r"ortacha\w*|sredn\w*|kurs\w*|muddat\w*|srok\w*)\b"
+)
 NO_PREFERENCE = re.compile(
     r"\b(?:farqi? (?:yoq|yuq)|farq qilmaydi|bilmadim|bilmayman|istalgan\w*|ahamiyati yoq|"
     r"nevajno|vse ravno|bez raznitsi|ne znayu|lyub\w*|any|dont know|doesnt matter)\b"
@@ -217,7 +234,11 @@ def missing_requirements(
         and review.period in {"all_available", "not_needed"}
     ):
         missing.append("period")
-    if review.task == "rank" and review.subject == "deal":
+    if review.task == "rank" and (
+        review.subject == "deal"
+        or review.ranking_by == "other"
+        or NAMED_METRIC.search(normalize(question))
+    ):
         missing = [field for field in missing if field != "ranking"]
     elif review.task == "rank" and review.ranking_by in {"missing", "not_needed"}:
         missing.append("ranking")
@@ -391,14 +412,29 @@ def answer_gap(review: RequestReview, question: str, data) -> str | None:
             "Other records share this first place, and LIMIT hides them. Use QUALIFY RANK() OVER "
             "(ORDER BY the same metric DESC) = 1 instead of LIMIT, so all of them are shown."
         )
+    value = normalize(question)
+    if "NOT is_cancelled" in (data.filters or "") and not NAMES_CANCELLED.search(value):
+        if review.task == "count":
+            return (
+                "Counts include cancelled deals unless the user excludes them. Remove NOT "
+                "is_cancelled, unless the user asked for that earlier in this conversation."
+            )
+        if NAMES_UNPAID.search(value):
+            return (
+                "Unpaid deals include cancelled ones unless the user excludes them. Use paid_on IS "
+                "NULL without NOT is_cancelled, and select the total with FILTER columns for "
+                "cancelled and not cancelled."
+            )
     if (
-        review.task == "count"
-        and "NOT is_cancelled" in (data.filters or "")
-        and not MENTIONS_CANCELLED.search(normalize(question))
+        not review.continuation
+        and "deal_date" in (data.filters or "")
+        and not TIME_WORDS.search(value)
+        and not FOLLOW_UP_WORDS.search(value)
     ):
         return (
-            "Counts include cancelled deals unless the user excludes them. Remove NOT is_cancelled, "
-            "unless the user asked for that earlier in this conversation."
+            "The user named no period in this question, and this result filters by date. A new "
+            "question covers all dates. Remove the date filter unless this message clearly "
+            "continues the previous result."
         )
     expressions = [data.expressions[key] for key in data.rows[0] if key in data.expressions]
     if review.task == "rank" and all(AGGREGATE_EXPRESSION.match(item) for item in expressions):
