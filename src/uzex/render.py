@@ -5,6 +5,7 @@ import re
 import sqlglot
 from sqlglot import exp
 
+from uzex.localization import localize
 from uzex.models import Answer, Evidence
 
 LABELS = {
@@ -69,6 +70,15 @@ LABELS = {
     "source_file": ("Manba fayli", "Файл-источник"),
     "source_row": ("CSV qatori", "Строка CSV"),
     "ratio": ("Hisoblangan nisbat", "Вычисленное отношение"),
+    "industry": ("Sanoat tarmog‘i", "Отрасль промышленности"),
+    "product_group": ("Tovar guruhi", "Группа товара"),
+    "delivery_basis": ("Yetkazish bazisi", "Базис поставки"),
+    "packaging": ("Qadoqlash", "Упаковка"),
+    "warehouse_address": ("Ombor manzili", "Адрес склада"),
+    "registered_on": ("Ro‘yxatdan o‘tgan sana", "Дата регистрации"),
+    "valid_until": ("Amal qilish muddati", "Действует до"),
+    "seller_vat_payer": ("Sotuvchi QQS to‘lovchisi", "Продавец — плательщик НДС"),
+    "buyer_vat_payer": ("Xaridor QQS to‘lovchisi", "Покупатель — плательщик НДС"),
 }
 TEXT = {
     "answer": ("Ma’lumotlar bo‘yicha natija", "Результат по данным"),
@@ -123,6 +133,26 @@ def label(expression: str, language: str) -> str:
         parsed = sqlglot.parse_one(expression, read="duckdb")
         if isinstance(parsed, exp.Column):
             return tr(LABELS.get(parsed.name, (parsed.name, parsed.name)), language)
+        if isinstance(parsed, exp.Filter):
+            return (
+                tr(("Shartga mos", "По условию"), language)
+                + ": "
+                + label(parsed.this.sql(dialect="duckdb"), language)
+            )
+        if isinstance(parsed, exp.Extract):
+            parts = {
+                "YEAR": ("yil", "год"),
+                "MONTH": ("oy", "месяц"),
+                "DAY": ("kun", "день"),
+                "QUARTER": ("chorak", "квартал"),
+            }
+            part = str(parsed.this).upper()
+            if part in parts:
+                return (
+                    label(parsed.expression.sql(dialect="duckdb"), language)
+                    + ": "
+                    + tr(parts[part], language)
+                )
         if isinstance(parsed, exp.AggFunc):
             prefixes = {
                 "COUNT": ("Soni", "Количество"),
@@ -145,7 +175,28 @@ def format_value(value, language: str) -> str:
         return tr(("Ko‘rsatilmagan", "Не указано"), language)
     if isinstance(value, bool):
         return tr(("Ha", "Да"), language) if value else tr(("Yo‘q", "Нет"), language)
-    return str(value)
+    return localize(str(value), language)
+
+
+def render_calculation(data: Evidence, language: str) -> str:
+    match = re.fullmatch(
+        r"(ratio|percentage|change_percent)\((\w+), (\w+)\); ROUND_HALF_UP, (\d) decimals",
+        data.calculation or "",
+    )
+    if not match:
+        return data.calculation or ""
+    operation, numerator, denominator, scale = match.groups()
+    n = label(data.expressions.get(numerator, numerator), language)
+    d = label(data.expressions.get(denominator, denominator), language)
+    formula = f"({n}) ÷ ({d})"
+    if operation == "percentage":
+        formula += " × 100%"
+    elif operation == "change_percent":
+        formula = f"(({n}) − ({d})) ÷ ({d}) × 100%"
+    precision = tr(
+        (f"{scale} kasr xonasigacha yaxlitlangan", f"округлено до {scale} знаков"), language
+    )
+    return f"{formula}; {precision}"
 
 
 def render_answer(answer: Answer) -> str:
@@ -179,11 +230,13 @@ def render_answer(answer: Answer) -> str:
         lines.append(
             tr(("Manba valyutalari", "Валюты исходных данных"), lang)
             + ": "
-            + ", ".join(data.currencies)
+            + ", ".join(localize(value, lang) for value in data.currencies)
         )
     if data.units:
         lines.append(
-            tr(("Manba birliklari", "Единицы исходных данных"), lang) + ": " + ", ".join(data.units)
+            tr(("Manba birliklari", "Единицы исходных данных"), lang)
+            + ": "
+            + ", ".join(localize(value, lang) for value in data.units)
         )
     if len(data.rows) > 10 or data.truncated:
         lines.append(
@@ -196,7 +249,7 @@ def render_answer(answer: Answer) -> str:
             )
         )
     if data.calculation:
-        lines.append(tr(("Hisob", "Расчёт"), lang) + ": " + data.calculation)
+        lines.append(tr(("Hisob", "Расчёт"), lang) + ": " + render_calculation(data, lang))
     lines.append(
         tr(
             (
