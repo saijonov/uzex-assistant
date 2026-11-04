@@ -91,5 +91,20 @@
       }
     ],
     "offline_tests": 71
+  },
+  "complete_deal_review": {
+    "offline_tests": 90,
+    "live_question": "eng birinchi bitim haqida barcha informatsiyani ber",
+    "outcome": "answer",
+    "seconds": 5.968,
+    "deal_id": "100001",
+    "selected_records": 1,
+    "candidate_records": 500000,
+    "selected_dates": [
+      "2022-01-03",
+      "2022-01-03"
+    ],
+    "query_replay_count": 118,
+    "query_result_changes": 0
   }
 }

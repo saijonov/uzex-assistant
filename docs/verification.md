@@ -10,7 +10,7 @@ Imported 500,000 deals, 6,616 contracts, 14,392 participants, 120 brokers and 1,
 
 ## Automated checks
 
-71 offline tests passed. They cover monetary values and lot calculations, date-specific conversion, blank delivery data, compound filters, region aliases, mixed currencies and units, forbidden SQL, strict tools, fabricated evidence IDs, false no-match claims, service failures, concurrent requests, Telegram splitting, update deduplication, restart recovery, chat ordering, ownership checks and command/reply handlers.
+90 offline tests passed. They cover monetary values and lot calculations, date-specific conversion, blank delivery data, compound filters, region aliases, mixed currencies and units, forbidden SQL, strict tools, fabricated evidence IDs, false no-match claims, service failures, concurrent requests, Telegram splitting, update deduplication, restart recovery, chat ordering, ownership checks and command/reply handlers.
 
 Lint and format checks passed. CI repeats offline checks on every push and builds the Python package without credentials or the full private dataset.
 
@@ -33,7 +33,7 @@ An earlier 12-question development run exposed over-restrictive year coverage an
 
 Telegram getMe validated the token and confirmed `uzex21_bot` / `UZEX21`. The macOS restart service started successfully and its polling heartbeat passed the health check. No allowlist or additional sign-up is configured.
 
-A separate Telegram account received a correct factual reply and reported a localization gap in descriptive values. Currency, unit, status, contract and classification values now use deterministic Uzbek translations; Russian replies translate Uzbek region names. Exact registered company and product names remain unchanged. Localization regression tests pass. A transient macOS service-reload race was fixed with bounded bootstrap retries and a regression test. The persistent job ledger confirms Telegram successfully delivered the factual reply, the Sources response and the CSV document to that account. Handler tests use a fake Telegram transport; live model tests use the real API and full dataset.
+A separate Telegram account received a correct factual reply and reported a localization gap in descriptive values. Currency, unit, status, contract and classification values now use deterministic Uzbek translations; Russian replies translate Uzbek region names. Exact registered company names and identifier codes remain unchanged. Product descriptions are translated for display, with the original source strings retained in Sources and CSV. Localization regression tests pass. A transient macOS service-reload race was fixed with bounded bootstrap retries and a regression test. The persistent job ledger confirms Telegram successfully delivered the factual reply, the Sources response and the CSV document to that account. Handler tests use a fake Telegram transport; live model tests use the real API and full dataset.
 
 The Docker image built successfully. A non-root container with a read-only dataset read the full manifest and answered the seller question through the real API. All 118 evidence queries from the two live evaluation sets were replayed after SQL guard hardening with no result changes. The additional historical USD rate question for 31 October 2026 returned 13357.84 from usd_rates. Only one live polling instance runs during deployment tests.
 
