@@ -63,12 +63,15 @@ def main() -> None:
         asyncio.run(run())
     elif args.command == "evaluate":
         from uzex.engine import Engine
-        from uzex.evaluate import evaluate
+        from uzex.evaluate import evaluate, evaluate_conversations
+
+        cases = json.loads(args.cases.read_text())
+        runner = evaluate_conversations if cases and "turns" in cases[0] else evaluate
 
         async def run_evaluation():
             engine = Engine(settings)
             try:
-                result = await evaluate(
+                result = await runner(
                     engine, args.cases, args.output, args.limit, args.concurrency, args.category
                 )
                 print(json.dumps(result, indent=2))
