@@ -103,6 +103,7 @@ class Finish(StrictModel):
         "mixed_currencies",
         "unsupported",
         "not_found",
+        "out_of_scope",
     ]
     candidates_query_id: str | None
 

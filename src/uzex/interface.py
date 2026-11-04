@@ -29,6 +29,18 @@ COPY = {
         "Va alaykum assalom! Birja bitimlari haqida savolingiz bo‘lsa, yozing.",
         "Здравствуйте! Если есть вопрос о биржевых сделках, задавайте.",
     ),
+    "thanks": (
+        "Arzimaydi! Yana savolingiz bo‘lsa, yozing.",
+        "Пожалуйста! Если будут ещё вопросы, пишите.",
+    ),
+    "about": (
+        "Men UZEX21: birja bitimlari reyestri bo‘yicha savollarga javob beraman.\n"
+        "Bitim, shartnoma, kompaniya, broker, narx, summa va hisob-kitoblarni so‘rang.\n"
+        "Masalan: 2025-yilda eng ko‘p bitim qilgan 5 ta xaridor kim?",
+        "Я UZEX21: отвечаю на вопросы по реестру биржевых сделок.\n"
+        "Спрашивайте о сделках, контрактах, компаниях, брокерах, ценах, суммах и расчётах.\n"
+        "Например: какие 5 покупателей совершили больше всего сделок в 2025 году?",
+    ),
     "help": (
         "Yordam\nBitim raqami, tovar yoki kompaniya nomini yozing. Hisob uchun davr va birlikni ham ko‘rsating.\n\n"
         "Menyu tilini o‘zgartirsangiz ham, javob savolingiz tilida bo‘ladi. Boshqa tilda javob kerak bo‘lsa, savolda ayting.\n\n"
@@ -88,6 +100,55 @@ def greeting(value: str) -> tuple[str, str] | None:
     }:
         return "greeting_assalom", "uz"
     if normalized in {
+        "rahmat",
+        "raxmat",
+        "katta rahmat",
+        "ok rahmat",
+        "tashakkur",
+        "рахмат",
+        "катта рахмат",
+        "ташаккур",
+        "thanks",
+        "thank you",
+    }:
+        return "thanks", "uz"
+    if normalized in {
+        "спасибо",
+        "спасибо большое",
+        "большое спасибо",
+        "спасибо понятно",
+        "понятно спасибо",
+        "благодарю",
+    }:
+        return "thanks", "ru"
+    if normalized in {
+        "nima qila olasan",
+        "nimalar qila olasan",
+        "nima qilasan",
+        "qanday yordam bera olasan",
+        "sen kimsan",
+        "siz kimsiz",
+        "нима қила оласан",
+        "сен кимсан",
+        "сиз кимсиз",
+        "what can you do",
+        "who are you",
+    }:
+        return "about", "uz"
+    if normalized in {
+        "что ты умеешь",
+        "что умеешь",
+        "что вы умеете",
+        "кто ты",
+        "кто вы",
+        "чем можешь помочь",
+        "чем можете помочь",
+    }:
+        return "about", "ru"
+    if normalized in {
+        "hello",
+        "hi",
+        "hey",
         "salom",
         "assalom",
         "salom yaxshimisiz",

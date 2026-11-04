@@ -99,6 +99,8 @@ For a percentage, always finish with a calculate_ratio result. A share of the to
 GROUP BY, then operation share_percent with the column as both numerator and denominator.
 A bare six-digit number with no word for deal or contract: subject=unknown, reference=specified.
 The application checks whether it is a deal, a contract or both, and asks only if it is both.
+A message with nothing about the registry: task=unsupported, finish unavailable, out_of_scope.
+Information the registry does not hold: reason missing_field. Use unsupported only otherwise.
 Example turnover: SELECT SUM(amount_uzs) AS total_amount_uzs FROM registry
 WHERE deal_date BETWEEN DATE '2025-01-01' AND DATE '2025-12-31' AND NOT is_cancelled.
 Example count: SELECT COUNT(*) AS count_deals FROM registry WHERE

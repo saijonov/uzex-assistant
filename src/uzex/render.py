@@ -112,12 +112,16 @@ TEXT = {
         "За этот период нет полных данных. Сделки: с 03.01.2022 по 30.10.2026.",
     ),
     "missing_field": (
-        "Bu ma’lumot reyestrda yo‘q.",
-        "Этих сведений в реестре нет.",
+        "Bu ma’lumot reyestrda yo‘q. Bitimlar soni, summa, hajm yoki narx bo‘yicha so‘rashingiz mumkin.",
+        "Этих сведений в реестре нет. Можно спросить о количестве сделок, сумме, объёме или цене.",
     ),
     "unsupported": (
-        "Bu ma’lumotlardan savolga aniq javob topib bo‘lmaydi.",
-        "По этим данным нельзя дать точный ответ.",
+        "Bu savolga reyestr ma’lumotlari bilan javob berib bo‘lmaydi. Bitimlar soni, summa, hajm yoki narx bo‘yicha so‘rashingiz mumkin.",
+        "На этот вопрос нельзя ответить по данным реестра. Можно спросить о количестве сделок, сумме, объёме или цене.",
+    ),
+    "out_of_scope": (
+        "Men faqat birja bitimlari reyestri bo‘yicha javob beraman. Bitimlar, shartnomalar, kompaniyalar, brokerlar yoki narxlar haqida so‘rang.",
+        "Я отвечаю только по реестру биржевых сделок. Спросите о сделках, контрактах, компаниях, брокерах или ценах.",
     ),
     "ambiguous_entity": (
         "Qaysi kompaniya, tovar yoki hudud? Aniq nomi yoki kodini yozing.",
