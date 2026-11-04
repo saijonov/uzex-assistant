@@ -57,6 +57,7 @@ class Evidence(BaseModel):
     truncated: bool = False
     calculation: str | None = None
     expressions: dict[str, str] = Field(default_factory=dict)
+    selected_record_count: int | None = None
 
 
 class Answer(BaseModel):

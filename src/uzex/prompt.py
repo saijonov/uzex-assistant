@@ -77,6 +77,9 @@ For region use region for seller warehouse, seller_region/buyer_region for compa
 Toshkent city and Toshkent region are different; ask if ambiguous.
 Both broker roles matter; use OR to count deals involving a broker without double counting.
 For top/rank questions ORDER BY requested metric DESC and LIMIT requested N (max 100).
+For the earliest/latest deal, order by deal_date, deal_time, deal_id (all ASC/DESC)
+and LIMIT 1. The result's selected_record_count and dates describe the selected deals;
+matched_count can describe the broader candidate set, not the selected deal itself.
 For complete lists >100 report truncation; never describe the first 100 as the whole set.
 An empty result is no_match only if a query actually executed; API/tool errors are not absence.
 Finish answer must reference an executed query_id (or calculated result) with actual evidence.

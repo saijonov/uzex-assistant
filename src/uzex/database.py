@@ -342,6 +342,44 @@ class Database:
                     dict(zip(sample_columns, map(serial, row), strict=True))
                     for row in sample_result.fetchall()
                 ]
+                selected_count = None
+                if (
+                    table == "registry"
+                    and not tree.find(exp.AggFunc)
+                    and not tree.args.get("group")
+                    and not tree.args.get("distinct")
+                ):
+                    selected = tree.copy()
+                    selected.set(
+                        "expressions",
+                        sqlglot.parse_one(
+                            "SELECT deal_id, contract_id, deal_date, currency, unit, source_file, source_row"
+                        ).expressions,
+                    )
+                    selection = db.execute(selected.sql(dialect="duckdb")).fetchmany(100)
+                    selected_count = len(selection)
+                    start = min((row[2] for row in selection), default=None)
+                    end = max((row[2] for row in selection), default=None)
+                    currencies = sorted({row[3] for row in selection})
+                    units = sorted({row[4] for row in selection})
+                    samples = [
+                        dict(
+                            zip(
+                                [
+                                    "deal_id",
+                                    "contract_id",
+                                    "deal_date",
+                                    "currency",
+                                    "unit",
+                                    "source_file",
+                                    "source_row",
+                                ],
+                                map(serial, row),
+                                strict=True,
+                            )
+                        )
+                        for row in selection[:3]
+                    ]
                 return Evidence(
                     query_id=query_id,
                     sql=sql,
@@ -358,6 +396,7 @@ class Database:
                     else None,
                     truncated=len(rows) > 100,
                     expressions=expressions,
+                    selected_record_count=selected_count,
                 )
             finally:
                 timer.cancel()
