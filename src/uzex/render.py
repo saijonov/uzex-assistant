@@ -231,6 +231,9 @@ def describe_condition(node, language: str) -> str:
             return tr(("bekor qilinmagan", "неаннулированные"), language)
         if isinstance(node.this, exp.In) and node.this.args.get("query") is not None:
             return describe_membership(node.this, False, language)
+        if isinstance(node.this, exp.Is) and isinstance(bare_column(node.this.this), exp.Column):
+            name = label(bare_column(node.this.this).name, language)
+            return f"{name}: " + tr(("ko‘rsatilgan", "указано"), language)
         return tr(("emas: ", "кроме: "), language) + describe_condition(node.this, language)
     if isinstance(node, exp.Column):
         if node.name == "is_cancelled":
@@ -262,9 +265,13 @@ def describe_condition(node, language: str) -> str:
         if node.args.get("query") is not None:
             return describe_membership(node, True, language)
         values = [condition_value(item, language) for item in node.expressions]
-        return f"{name}: " + ", ".join(values) if len(values) <= 4 else f"{name}: {len(values)}"
+        if len(values) <= 4:
+            return f"{name}: " + ", ".join(values)
+        rest = len(values) - 3
+        more = tr((f"va yana {rest} ta", f"и ещё {rest}"), language)
+        return f"{name}: " + ", ".join(values[:3]) + f" {more}"
     if isinstance(node, (exp.Like, exp.ILike)):
-        return f"{name}: «{node.expression.name.strip('%')}»"
+        return f"{name}: «{node.expression.name.replace('%', ' ').strip()}»"
     return node.sql(dialect="duckdb")
 
 
@@ -398,8 +405,11 @@ def value_field(expression: str) -> str | None:
     match = re.fullmatch(r"(?:MIN|MAX)\((\w+)\)", expression, re.IGNORECASE)
     if match:
         return match.group(1)
-    if re.match(r"SUM\(amount_usd\)", expression, re.IGNORECASE):
-        return "amount_usd"
+    match = re.match(
+        r"(?:SUM|MIN|MAX|MEDIAN)\((amount_uzs|amount_usd|amount)\)", expression, re.IGNORECASE
+    )
+    if match:
+        return match.group(1)
     if re.match(r"EXTRACT\((?:DAYOFWEEK|DOW|ISODOW)\b", expression, re.IGNORECASE):
         return "day_of_week"
     if re.fullmatch(r"(?:STRFTIME|TIME_TO_STR)\(.*'%A'\)", expression, re.IGNORECASE):
@@ -434,7 +444,7 @@ def format_value(value, language: str, field: str | None = None) -> str:
     if field == "day_name" and value in ENGLISH_DAYS:
         return tr(DAY_NAMES[ENGLISH_DAYS.index(value)], language)
     number = str(value)
-    if field == "amount_usd" and re.fullmatch(r"-?\d+(?:\.\d+)?", number):
+    if field in {"amount", "amount_uzs", "amount_usd"} and re.fullmatch(r"-?\d+(?:\.\d+)?", number):
         number = str(Decimal(number).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
     if field not in protected and re.fullmatch(r"-?\d+(?:\.\d+)?", number):
         whole, dot, fraction = number.partition(".")

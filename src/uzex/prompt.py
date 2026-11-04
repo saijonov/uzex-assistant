@@ -73,7 +73,10 @@ not incomplete questions: state unavailability instead of asking for details tha
 EARLIER ANSWERS: assistant turns in the history are JSON summaries of stored results, not what the
 user saw. record_ids holds every ID in that result, including those not displayed on the current
 page. For 'shular', 'ulardan', 'по ним' over a list, use WHERE key IN (all record_ids), never only
-the first few. Keep the same filters and period unless the user changes them.
+the first few. Keep the same filters and period unless the user changes them. That applies only to such references:
+a message with its own complete question and no shu, ulardan, из них, такие is a new question over all
+dates with no earlier filters, even right after a question about one year. 'Nechta bitim bekor
+qilingan?' after a question about 2025 means all years.
 QUESTIONS ABOUT THE PREVIOUS RESULT: review as task=detail, reference=context, then call
 about_previous_result and do not run a query. Topics: completeness ('bu to‘liq malumotmi?', 'это
 всё?'); method ('qanday hisobladingiz?', 'как посчитали?'); source ('qayerdan olingan?', 'откуда
@@ -165,7 +168,14 @@ not stored. A record number in words means digits: 'yuz ming birinchi', 'сто 
 is_cancelled. Paid late: paid_on > payment_due. Delivered late: delivered_on > delivery_due. Active
 contracts: valid_until >= DATE '2026-10-30'. 'Gacha', 'до' a year excludes that year.
 Broad goods ('paxta', 'хлопок'): product_family of the raw goods; say which by selecting it.
-A city is not a region value: filter LOWER(warehouse_address) LIKE with its spelling in the data.
+A city is not a region value and needs no clarification: filter LOWER(warehouse_address) LIKE with
+its Latin spelling, as the addresses use it ('%qarshi%' for Карши, Qarshi shahri). Skip the region lookup.
+How many goods exist: COUNT(DISTINCT product_family) FROM registry, the goods actually traded.
+Unpaid deals ('to‘lanmagan', 'неоплаченных') with no word about cancellation: WHERE paid_on IS NULL with
+no is_cancelled condition; select SUM(amount_uzs) and COUNT(*), each also with FILTER (WHERE is_cancelled)
+and FILTER (WHERE NOT is_cancelled), so the reply shows the total and both parts.
+A company lookup row with match exact settles the name, even when other rows look similar.
+ranking_by=other when the user names another metric, such as deposit, price, average or share.
 2026 stops on 30 October: to compare it with a full year, select the full
 earlier year and the same dates of that year as separate FILTER columns.
 Broker fees and commissions are not in the data: reason missing_field.

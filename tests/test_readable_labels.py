@@ -1,7 +1,8 @@
 import pytest
+import sqlglot
 
 from uzex.models import Answer
-from uzex.render import label, render_answer
+from uzex.render import describe_condition, label, render_answer
 
 
 @pytest.mark.parametrize(
@@ -52,3 +53,16 @@ def test_days_of_the_week_are_shown_by_name(sample_database):
     assert "День недели: Среда" in text or "Дата сделки: день недели: Среда" in text
     text = render_answer(Answer(outcome="answer", language="uz", evidence=data))
     assert "Chorshanba" in text
+
+
+@pytest.mark.parametrize(
+    "condition,expected",
+    [
+        ("LOWER(product_name) LIKE '%хлопок%сырец%'", "хлопок сырец"),
+        ("paid_on IS NOT NULL", "Дата оплаты: указано"),
+        ("region IN ('a', 'b', 'c', 'd', 'e', 'f')", "a, b, c и ещё 3"),
+    ],
+)
+def test_conditions_read_naturally(condition, expected):
+    node = sqlglot.parse_one(f"SELECT 1 FROM t WHERE {condition}", read="duckdb").args["where"].this
+    assert expected in describe_condition(node, "ru")
