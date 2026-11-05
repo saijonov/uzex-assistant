@@ -152,3 +152,7 @@ Offline: 789 tests passed and 3 skipped, with lint and format checks passing.
 
 Limits of these results. 28 of 31 is one small sample of questions I wrote, not a measure of what judges will ask. The fixes were aimed at those questions, so no unseen score exists for the final code. The full 100 tricky questions ran on the production model only before these changes, and on the cheap model after them. Nothing here was tested in the real Telegram app.
 
+## Language selection removed
+
+The language picker, the `/language` command and the stored language are gone. One live chat on `gpt-6.1-sol`, medium effort, went through `/start`, Russian, Uzbek Latin, Uzbek Cyrillic and back, with a Russian follow-up on an Uzbek question and the old `Til` and `/language` inputs. It passed all 10 turns, slowest 7.997 s. Offline: 796 tests passed and 3 skipped, with lint and format checks passing. The full question sets were not rerun, because this change does not touch querying, and the real Telegram app was not tested.
+

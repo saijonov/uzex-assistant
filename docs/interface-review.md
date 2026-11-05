@@ -12,11 +12,11 @@ Writing reference: [GOV.UK, Writing for user interfaces](https://www.gov.uk/serv
 
 ## Languages and navigation
 
-The first `/start` offers Uzbek and Russian. This is a preference, not an access gate: a question can be answered before a language is selected. Until selection, controls use the Telegram language where supported, with Uzbek as the default.
+There is no language selection and no language is stored. Each question is answered in its own language, with explicit requests for Uzbek or Russian taking priority. Short follow-ups retain the prior answer language when appropriate.
 
-The selected language controls menus, examples, help and commands. Each question is answered in its own language, with explicit requests for Uzbek or Russian taking priority. Menu language is never passed as a forced answer-language override. Short follow-ups retain the prior answer language when appropriate.
+`/start`, help, examples, the buttons and the command list show Uzbek and Russian together, because no language is known before the first question.
 
-The persistent keyboard contains Examples, Help, Language and New chat. The same actions are available through `/examples`, `/help`, `/language` and `/reset`, with `/menu` restoring the keyboard. Changing menu language preserves conversation history. New chat clears conversation history and preserves menu language. Existing stored preferences continue to work without a state migration.
+The persistent keyboard contains Examples, Help and New chat. The same actions are available through `/examples`, `/help` and `/reset`, with `/menu` restoring the keyboard. New chat clears conversation history. Old keyboards still work: their single-language labels are recognised, and `Til`, `Язык` and `/language` show help with the new keyboard. `/start` also removes the old command list saved for that chat.
 
 Telegram references: [Keyboards and language support](https://core.telegram.org/bots/features), [Bot API formatting](https://core.telegram.org/bots/api#formatting-options).
 
