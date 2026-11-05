@@ -33,7 +33,7 @@ PYTHONPATH=src uv run uzex install-service
 make health
 ```
 
-The service starts at login and restarts after failures. It does not keep a sleeping computer online. Keep the computer awake during judging, for example with `caffeinate -i` in a separate terminal. Logs are in `var/bot.log`.
+The service starts at login and restarts after failures. It does not keep a sleeping computer online. During judging keep the computer on power with the lid open, and run `caffeinate -i` in a separate terminal. `caffeinate` does not stop the sleep that closing the lid causes on battery: a question in progress at that moment fails, and later ones wait until the computer wakes. Logs are in `var/bot.log`.
 
 Stop or restart the macOS service:
 
@@ -65,6 +65,7 @@ PYTHONPATH=src uv run uzex evaluate --cases evaluation/challenge.json --output r
 PYTHONPATH=src uv run uzex evaluate --cases evaluation/hard.json --category critical --output reports/hard-critical.json
 PYTHONPATH=src uv run uzex evaluate --cases evaluation/hard.json --output reports/hard.json
 PYTHONPATH=src uv run uzex evaluate --cases evaluation/tricky.json --output reports/tricky.json
+PYTHONPATH=src uv run uzex evaluate --cases evaluation/fresh.json --output reports/fresh.json
 ```
 
 `evaluation/hard.json` holds natural multi-turn conversations, run through the real service with Telegram replaced by a recorder and graded on the text and files a user receives. The `critical` category is a low-cost subset of 20 conversations covering the main failures found so far. `evaluation/tricky.json` holds 50 questions in both languages built to break the harness and the model. Live evaluation spends API credits.
