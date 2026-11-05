@@ -1,10 +1,24 @@
 import datetime as dt
 import re
 
+import sqlglot
+from sqlglot import exp
+
 from uzex.database import TOSHKENT_REGIONS, named_regions, normalize, region_choice
 from uzex.models import RequestReview
 
 OPTIONAL_FIELDS = {"period", "unit", "currency", "ranking", "role", "region"}
+PRODUCT_DETAIL_COLUMNS = {
+    "product",
+    "product_name",
+    "brand",
+    "size",
+    "grade",
+    "product_type",
+    "product_class",
+}
+GRADE_WORDS = re.compile(r"сорт|класс|sort|klass|sinf|\bnav")
+SHORT_CODE = re.compile(r"[^\W\d]{1,3}-[^\W\d]{1,3}")
 UNIT_WORDS = re.compile(
     r"\b(?:kg|kilo\w*|tonn\w*|litr\w*|dona\w*|sht|shtuk\w*|metr\w*|kubometr\w*|kub|kvadrat\w*|lot\w*)\b"
 )
@@ -401,6 +415,33 @@ def unit_gap(question: str, data) -> str | None:
                 "The user asked for a price per tonne, and this divides by kilograms. "
                 "Use SUM(mass_t)."
             )
+    return None
+
+
+def squeezed(value: str) -> str:
+    return re.sub(r"[^0-9a-z]", "", normalize(value))
+
+
+def unnamed_code(context: str, sql: str) -> str | None:
+    try:
+        tree = sqlglot.parse_one(sql, read="duckdb")
+    except sqlglot.errors.ParseError:
+        return None
+    known = squeezed(context)
+    for node in tree.find_all(exp.Like, exp.ILike, exp.EQ, exp.In):
+        column = node.this.find(exp.Column)
+        if column is None or column.name not in PRODUCT_DETAIL_COLUMNS:
+            continue
+        for literal in node.find_all(exp.Literal):
+            code = literal.this.strip("%_ ")
+            if not literal.is_string or GRADE_WORDS.search(code.lower()):
+                continue
+            if not re.search(r"\d", code) and not SHORT_CODE.fullmatch(code):
+                continue
+            numbers = re.findall(r"\d{2,}", code)
+            if squeezed(code) in known or (numbers and all(n in known for n in numbers)):
+                continue
+            return code
     return None
 
 

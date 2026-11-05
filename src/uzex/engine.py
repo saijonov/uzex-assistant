@@ -33,6 +33,7 @@ from uzex.policy import (
     settle_candidates,
     unavailable_request,
     unit_gap,
+    unnamed_code,
 )
 from uzex.prompt import instructions
 
@@ -484,6 +485,17 @@ class Engine:
                                     ) or unit_gap(context, part)
                                     if wrong_scope:
                                         raise ValueError(wrong_scope)
+                                said = json.dumps([context, pending, history], ensure_ascii=False)
+                                for part in parts:
+                                    code = unnamed_code(said, part.sql)
+                                    if code:
+                                        raise ValueError(
+                                            f"The user never named the code {code}. The registry "
+                                            "does not say what its codes mean, so do not translate "
+                                            "a description such as winter or Euro-5 into a code from "
+                                            "outside knowledge. Finish with outcome unavailable, "
+                                            "reason missing_field."
+                                        )
                             gaps = [answer_gap(review, question, part) for part in parts]
                             gap = gaps[0] if all(gaps) else None
                             if gap and finish.outcome == "answer" and not gap_reported:

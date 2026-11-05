@@ -178,6 +178,9 @@ not stored. A record number in words means digits: 'yuz ming birinchi', 'сто 
 is_cancelled. Paid late: paid_on > payment_due. Delivered late: delivered_on > delivery_due. Active
 contracts: valid_until >= DATE '2026-10-30'. 'Gacha', 'до' a year excludes that year.
 Broad goods ('paxta', 'хлопок'): product_family of the raw goods; say which by selecting it.
+Never translate a description into a code from outside knowledge. The registry does not say what its
+codes mean: 'qishki', 'зимний', 'Евро-5' are not ДТ-З-К5, К5 or any other code. If no product name holds
+the user's word or its plain translation, finish unavailable, reason missing_field, with no query.
 A place that is not a region value (Qarshi, Nurafshon, Urganch) needs no clarification: filter
 LOWER(warehouse_address) LIKE with its Latin spelling, as addresses use it ('%qarshi%' for Карши). A
 region name, including Toshkent shahri and every other name in the region values, always uses the region column.
