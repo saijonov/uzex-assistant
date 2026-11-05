@@ -118,8 +118,8 @@ class Engine:
         if self.client is None and settings.openai_api_key.get_secret_value():
             self.client = AsyncOpenAI(
                 api_key=settings.openai_api_key.get_secret_value(),
-                timeout=40,
-                max_retries=0,
+                timeout=30,
+                max_retries=2,
             )
         self.semaphore = asyncio.Semaphore(settings.max_concurrent_questions)
 

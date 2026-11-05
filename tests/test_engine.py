@@ -158,3 +158,10 @@ def test_long_telegram_text_splits_without_losing_content():
     chunks = split_text(text)
     assert all(len(part) <= 3500 for part in chunks)
     assert "".join(chunks) == text
+
+
+def test_a_passing_api_failure_is_retried_inside_the_answer_limit(sample_database):
+    settings = Settings(_env_file=None, openai_api_key="test", answer_timeout_seconds=75)
+    client = Engine(settings, database=sample_database).client
+    assert client.max_retries == 2
+    assert client.timeout * 2 < settings.answer_timeout_seconds
