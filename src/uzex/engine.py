@@ -531,6 +531,7 @@ class Engine:
                             extra_evidence=extras,
                             candidates=candidates,
                             continues_pending=review.continuation,
+                            refutes_claim=finish.refutes_claim and finish.outcome == "answer",
                         )
                     else:
                         raise ValueError("Unknown tool")

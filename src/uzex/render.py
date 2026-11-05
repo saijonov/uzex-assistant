@@ -789,7 +789,10 @@ def render_answer(answer: Answer, page: int = 0) -> str:
         render_result(data, answer.outcome == "no_match" or (extras and is_empty(data)), lang, page)
     ]
     parts.extend(render_result(extra, is_empty(extra), lang, 0) for extra in extras)
-    return "\n\n———\n\n".join(parts)
+    text = "\n\n———\n\n".join(parts)
+    if answer.refutes_claim and page == 0:
+        return tr(("Yo‘q.", "Нет."), lang) + "\n" + text
+    return text
 
 
 def is_empty(data: Evidence) -> bool:

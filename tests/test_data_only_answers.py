@@ -1,5 +1,7 @@
 import pytest
 from test_engine import ScriptedClient, finish, review
+from test_interface import make_service
+from test_telegram import message_job
 
 from uzex.config import Settings
 from uzex.engine import Engine
@@ -203,3 +205,48 @@ async def test_a_not_found_reply_lists_no_similar_products(monkeypatch, sample_d
     assert answer.outcome == "unavailable"
     assert answer.candidates == []
     assert "Сжиженный" not in render_answer(answer)
+
+
+@pytest.mark.parametrize("language,word", [("uz", "Yo‘q."), ("ru", "Нет.")])
+async def test_a_refuted_claim_starts_with_a_plain_no(sample_database, language, word):
+    end = finish()
+    end[1]["language"] = language
+    end[1]["refutes_claim"] = True
+    client = ScriptedClient(
+        [("query_registry", {"sql": "SELECT COUNT(*) AS n FROM registry"}), end]
+    )
+    engine = Engine(Settings(_env_file=None), client, sample_database)
+    answer = await engine.answer("В 2024 году было 5 млн сделок, верно?")
+    assert answer.refutes_claim
+    assert render_answer(answer).startswith(word + "\n")
+
+
+async def test_an_ordinary_answer_has_no_added_no(sample_database):
+    client = ScriptedClient(
+        [("query_registry", {"sql": "SELECT COUNT(*) AS n FROM registry"}), finish()]
+    )
+    engine = Engine(Settings(_env_file=None), client, sample_database)
+    answer = await engine.answer("Сколько сделок?")
+    assert not answer.refutes_claim
+    assert not render_answer(answer).startswith("Нет.")
+
+
+async def test_a_refutation_cannot_mark_a_refusal(sample_database):
+    end = finish("unavailable", None, "missing_field")
+    end[1]["refutes_claim"] = True
+    client = ScriptedClient([end])
+    engine = Engine(Settings(_env_file=None), client, sample_database)
+    answer = await engine.answer("Кто директор?")
+    assert not answer.refutes_claim
+
+
+async def test_the_reply_reaches_telegram_with_the_no(tmp_path, sample_database):
+    end = finish()
+    end[1]["refutes_claim"] = True
+    client = ScriptedClient(
+        [("query_registry", {"sql": "SELECT COUNT(*) AS n FROM registry"}), end]
+    )
+    service = make_service(tmp_path, sample_database, client)
+    result = await service.prepare(message_job("В 2024 году было 5 млн сделок, верно?"))
+    assert result["texts"][0].startswith("Нет.\n")
+    service.state.close()

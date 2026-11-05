@@ -124,6 +124,7 @@ class Finish(StrictModel):
     ]
     candidates_query_id: str | None
     also_query_ids: list[str]
+    refutes_claim: bool
 
 
 class Evidence(BaseModel):
@@ -174,3 +175,4 @@ class Answer(BaseModel):
     request_id: str = ""
     missing_fields: list[MissingField] = Field(default_factory=list)
     continues_pending: bool = False
+    refutes_claim: bool = False

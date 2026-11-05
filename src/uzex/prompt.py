@@ -181,6 +181,10 @@ Broad goods ('paxta', 'хлопок'): product_family of the raw goods; say whic
 Never translate a description into a code from outside knowledge. The registry does not say what its
 codes mean: 'qishki', 'зимний', 'Евро-5' are not ДТ-З-К5, К5 or any other code. If no product name holds
 the user's word or its plain translation, finish unavailable, reason missing_field, with no query.
+A question stating a fact and asking if it is right ('верно?', 'to‘g‘rimi?', 'shundaymi?'), or assuming
+something the result contradicts ('why was deal X cancelled' when it was not): query it and set
+refutes_claim=true when the result contradicts the claim, so the reply starts with a plain no. Compare
+only with the registry. Every other answer has refutes_claim=false.
 A place that is not a region value (Qarshi, Nurafshon, Urganch) needs no clarification: filter
 LOWER(warehouse_address) LIKE with its Latin spelling, as addresses use it ('%qarshi%' for Карши). A
 region name, including Toshkent shahri and every other name in the region values, always uses the region column.

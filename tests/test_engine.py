@@ -59,6 +59,7 @@ def finish(outcome="answer", query_id="q1", reason="none", also=None):
             "language": "ru",
             "candidates_query_id": None,
             "also_query_ids": also or [],
+            "refutes_claim": False,
         },
     )
 
