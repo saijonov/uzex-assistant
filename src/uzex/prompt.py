@@ -106,6 +106,13 @@ answers 'no deals at all' questions.
 MEDIAN(amount_uzs). ORDER BY ... LIMIT 1 OFFSET 1 for second place.
 A ranking must name who or what ranks: select its code or name, never only a total. 'Eng katta
 bitim' or 'самая крупная сделка' with no metric means the largest amount: ORDER BY amount_uzs DESC.
+'Eng qimmat bitim', 'самая дорогая сделка' are the same. 'Eng arzon bitim', 'eng kichik bitim',
+'самая дешёвая сделка' mean the smallest amount: ORDER BY amount_uzs ASC. Use ranking_by=amount and
+ask nothing. Only words for a unit price ('birlik narxi', 'цена за единицу') mean unit_price.
+Which good sold or was bought most ('eng ko‘p qaysi tovar', 'какой товар больше всего') with no metric
+needs no question either: ranking_by=count, one top list by deal count, then one by amount without
+cancelled deals in also_query_ids, because winners can differ. This covers goods only: a vague 'best',
+or a ranking of companies or brokers with no metric, still asks.
 Deals in different currencies or units cannot be ranked by amount, price or volume directly.
 For a percentage, always finish with a calculate_ratio result. Use scale 2 unless the user asks for
 more decimals. A share of the total per group:
@@ -173,7 +180,8 @@ Broad goods ('paxta', 'хлопок'): product_family of the raw goods; say whic
 A place that is not a region value (Qarshi, Nurafshon, Urganch) needs no clarification: filter
 LOWER(warehouse_address) LIKE with its Latin spelling, as addresses use it ('%qarshi%' for Карши). A
 region name, including Toshkent shahri and every other name in the region values, always uses the region column.
-How many goods exist: COUNT(DISTINCT product_family) FROM registry, the goods actually traded.
+How many goods exist: SELECT COUNT(DISTINCT product_family), COUNT(DISTINCT product) FROM registry,
+the goods actually traded and the number of ways sellers write them.
 Unpaid deals ('to‘lanmagan', 'неоплаченных') with no word about cancellation: WHERE paid_on IS NULL with
 no is_cancelled condition; select SUM(amount_uzs) and COUNT(*), each also with FILTER (WHERE is_cancelled)
 and FILTER (WHERE NOT is_cancelled), so the reply shows the total and both parts.
@@ -219,9 +227,13 @@ Final price is amount / volume, NOT starting_price or base_price.
 unit_price is amount / volume per deal, in that deal's own currency and unit. To rank deals by
 price, filter one currency and one unit, then ORDER BY unit_price. An average over many deals is
 still SUM(amount) / SUM(volume).
-product_family merges one product's seller spellings ('Хлопок сырец', 'ХЛОПОК-СЫРЕЦ') and keeps
-grades, classes and spot/forward apart. GROUP BY product_family for any ranking or breakdown by
-product, never product or product_name. To filter a product use product_family values from lookup.
+product_family is one good: it merges every seller spelling and every grade, class or brand written
+into the name, by HS code. Cotton spot, forward and futures stay apart, and so do diesel and fuel oil.
+GROUP BY product_family for any ranking or breakdown by product, never product or product_name.
+To filter a good use product_family values from lookup. For one named grade, class, brand or size
+('АИ-92', '1 сорт', 'М00к') filter LOWER(product_name) LIKE instead, with every way sellers write it
+('% 1 сорт%', '%1-сорт%', '% i сорт%', '%первый сорт%'): product_name holds them all, and a pattern
+without the leading space also catches II and III.
 seller_activity, buyer_activity, seller_broker_region and buyer_broker_region are on registry.
 mass_kg, mass_t and delivered_mass_kg normalize kilograms and tonnes, NULL for non-mass units.
 For a price per tonne divide by SUM(mass_t), per kilogram by SUM(mass_kg).
