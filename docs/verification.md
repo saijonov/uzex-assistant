@@ -172,3 +172,22 @@ Immediately after the reboot, the health check reported healthy from a heartbeat
 
 Limits of these results. No Telegram message had reached the server when this was written. There is one server, with no alert if it goes down, and it depends on the OpenAI balance and the AWS account staying active.
 
+## Trap questions, live
+
+`evaluation/traps.json` holds questions whose answers are absent from the data, checked against the data first: missing goods and companies, missing fields, predictions, conversions that need an outside number, false claims and pressure to guess. The first run of 39 messages invented no figure or record. Three replies did use outside knowledge: `зимнее` and `qishki` dizel were read as the grade `ДТ-З-К5`, and `Евро-5` as `К5`, which matches all diesel. The registry does not say what these codes mean. Three others listed similar goods or companies after "not found", or never said a name was absent, and a false claim got the right number without a plain no.
+
+Fixes: a filter on a grade code the user never named is now rejected in code, a name with only lookalike matches is reported as not in the registry, "not found" replies list no similar goods, and a refuted claim starts with a plain no.
+
+| Run | Model | Passed | P95 | Slowest |
+|---|---|---:|---:|---:|
+| Trap questions | `gpt-6.1-sol`, medium | 45/45 | 10.776 s | 13.446 s |
+| Product questions | `gpt-6.1-sol`, medium | 9/9 | 11.242 s | 11.242 s |
+| Related tricky questions and chat replay | `gpt-6.1-sol`, medium | 16/16 | 11.689 s | 13.964 s |
+| Cheap-model misses rechecked | `gpt-6.1-sol`, medium | 20/21 | 14.817 s | 14.817 s |
+
+The checks also cover the other direction: a code the user names (`ДТ-З-К5`, `92 benzin`) still answers, and true claims get no "no". Regression on `gpt-6-luna` with low effort: tricky 85/101, natural conversations 92/96, main 99/100, challenge 32/32. The one miss on `gpt-6.1-sol` is `Nega 2025-yilda bitimlar ko'paydi?`, which varies between runs: it asks what to compare, or shows counts and the change. It states no reason, though it should say the reason is not in the data.
+
+The fixes are deployed from commit 330cac8. On the server, a one-off container in the running service confirmed the corrected replies. Offline: 823 tests passed and 3 skipped, with lint and format checks passing.
+
+Limits of these results. Each trap question ran about once and the model varies between runs. The code check covers grade codes, so a description translated into ordinary words relies on the prompt rule. The full 100 tricky questions last ran on the production model before the product fix.
+
