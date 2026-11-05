@@ -4,7 +4,7 @@ import duckdb
 import pytest
 
 from uzex.database import Database
-from uzex.ingest import product_families, product_key
+from uzex.ingest import product_families
 from uzex.models import Answer
 from uzex.render import render_answer
 
@@ -12,45 +12,43 @@ from uzex.render import render_answer
 @pytest.mark.parametrize(
     "spellings",
     [
+        ["ПОРТЛАНДЦЕМЕНТ", "Портландцемент ЦЕМ I 42,5 Н", "Цемент портландский ЦЕМ II/В-К 32,5Н"],
+        ["БЕНЗИН АВТОМОБИЛЬНЫЙ", "Бензин", "Бензин автомобильный АИ-92"],
+        ["Пшеница продовольственная", "Пшеница", "Пшеница 4-класс"],
         [
             "Хлопок сырец (спот)",
-            "Хлопок-сырец (спот)",
-            "ХЛОПОК-СЫРЕЦ (СПОТ)",
-            "ХЛОПОК СЫРЕЦ (СПОТ)",
+            "ХЛОПОК-СЫРЕЦ (СПОТ) 2 СОРТ 1-КЛАСС",
+            "Хлопок-сырец (спот) I сорт 1-класс",
         ],
-        ["ПОРТЛАНДЦЕМЕНТ", "Портландцемент", "Цемент портландский"],
-        ["Пряжа хлопковая", "ПРЯЖА ХЛОПЧАТОБУМАЖНАЯ"],
-        ["КАТОД МЕДНЫЙ", "Медный катод"],
-        ["Хлопок-сырец (спот) I сорт 1-класс", "ХЛОПОК СЫРЕЦ (СПОТ) ПЕРВЫЙ СОРТ I КЛАСС"],
+        ["Карбамид", "Мочевина (карбамид)"],
     ],
 )
-def test_seller_spellings_of_one_product_share_a_key(spellings):
-    assert len({product_key(spelling) for spelling in spellings}) == 1
+def test_every_way_of_writing_one_good_gets_one_name(spellings):
+    counts = [(name, "000001", 10 - index) for index, name in enumerate(spellings)]
+    assert set(product_families(counts).values()) == {spellings[0]}
 
 
 @pytest.mark.parametrize(
     "first,second",
     [
         ("Хлопок сырец (спот)", "Хлопок сырец (форвард)"),
-        ("Катод медный М00к", "Катод медный М0к"),
-        ("Сахар белый", "САХАР-ПЕСОК"),
-        ("Хлопок-сырец (спот) I сорт 1-класс", "Хлопок-сырец (спот) I сорт II класс"),
-        ("Пшеница", "Пшеница продовольственная"),
+        ("Хлопок сырец (спот)", "ХЛОПОК-СЫРЕЦ (ФЬЮЧЕРС) ПЕРВЫЙ СОРТ II КЛАСС"),
+        ("Топливо дизельное", "Мазут топочный"),
     ],
 )
-def test_different_products_and_grades_stay_apart(first, second):
-    assert product_key(first) != product_key(second)
+def test_different_goods_with_one_code_stay_apart(first, second):
+    families = product_families([(first, "000001", 5), (second, "000001", 3)])
+    assert families[first] != families[second]
 
 
-def test_family_is_named_after_the_most_used_spelling():
-    families = product_families(
-        [("ХЛОПОК-СЫРЕЦ (СПОТ)", 3), ("Хлопок сырец (спот)", 10), ("Сахар белый", 1)]
-    )
-    assert families == {
-        "ХЛОПОК-СЫРЕЦ (СПОТ)": "Хлопок сырец (спот)",
-        "Хлопок сырец (спот)": "Хлопок сырец (спот)",
-        "Сахар белый": "Сахар белый",
-    }
+def test_goods_with_different_codes_stay_apart():
+    families = product_families([("Рис", "100630", 5), ("Соль", "250100", 3)])
+    assert families["Рис"] != families["Соль"]
+
+
+def test_the_good_is_named_after_its_most_traded_spelling():
+    families = product_families([("Катод медный М0к", "740311", 3), ("КАТОД МЕДНЫЙ", "740311", 10)])
+    assert families == {"Катод медный М0к": "КАТОД МЕДНЫЙ", "КАТОД МЕДНЫЙ": "КАТОД МЕДНЫЙ"}
 
 
 def test_registry_can_group_by_merged_product(sample_database):

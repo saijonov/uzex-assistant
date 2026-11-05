@@ -8,7 +8,7 @@ from pathlib import Path
 
 import duckdb
 
-from uzex.terminology import translate_description
+SEPARATE_GOODS = re.compile(r"спот|форвард|фьючерс|мазут")
 
 CONTRACT_FIELDS = {
     "Номер контракта": "contract_id",
@@ -51,16 +51,16 @@ DEAL_FIELDS = {
 }
 
 
-def product_key(product: str) -> str:
-    text = re.sub(r",\s*(?:marka|o‘lcham|nav|tur|sinf):", "", translate_description(product))
-    return re.sub(r"[^0-9a-zа-яёўқғҳ]", "", text.casefold())
+def product_group(product: str, hs_code: str) -> tuple[str, str]:
+    mark = SEPARATE_GOODS.search(product.casefold())
+    return hs_code, mark.group() if mark else ""
 
 
-def product_families(counts: list[tuple[str, int]]) -> dict[str, str]:
-    names: dict[str, str] = {}
-    for product, _ in sorted(counts, key=lambda item: (-item[1], item[0])):
-        names.setdefault(product_key(product), product)
-    return {product: names[product_key(product)] for product, _ in counts}
+def product_families(counts: list[tuple[str, str, int]]) -> dict[str, str]:
+    names: dict[tuple[str, str], str] = {}
+    for product, hs_code, _ in sorted(counts, key=lambda item: (-item[2], item[0])):
+        names.setdefault(product_group(product, hs_code), product)
+    return {product: names[product_group(product, hs_code)] for product, hs_code, _ in counts}
 
 
 def text_fields(mapping: dict[str, str]) -> list[str]:
@@ -185,8 +185,8 @@ def import_archive(archive: Path, destination: Path) -> dict:
                     if duplicates:
                         raise ValueError(f"Duplicate or null keys in {table}")
                 counts = db.execute(
-                    "SELECT c.product, count(d.deal_id) FROM contracts c "
-                    "LEFT JOIN deals d USING (contract_id) GROUP BY c.product"
+                    "SELECT c.product, c.hs_code, count(d.deal_id) FROM contracts c "
+                    "LEFT JOIN deals d USING (contract_id) GROUP BY c.product, c.hs_code"
                 ).fetchall()
                 db.execute("ALTER TABLE contracts ADD COLUMN product_family VARCHAR")
                 db.executemany(
