@@ -164,6 +164,7 @@ DISTINCT_LABELS = {
     "deal_id": ("Bitimlar soni", "Количество сделок"),
     "contract_id": ("Shartnomalar soni", "Количество контрактов"),
     "product_family": ("Tovarlar soni", "Количество товаров"),
+    "product": ("Yozilish turlari soni", "Количество вариантов написания"),
 }
 BROKER_SIDES = {
     "seller_broker_code": ("sotuvchi tomonida", "на стороне продавца"),

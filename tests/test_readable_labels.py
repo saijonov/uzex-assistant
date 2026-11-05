@@ -9,6 +9,8 @@ from uzex.render import describe_condition, label, render_answer
     "expression,language,expected",
     [
         ("EXTRACT(DAYOFWEEK FROM deal_date)", "uz", "Bitim sanasi: hafta kuni"),
+        ("COUNT(DISTINCT product)", "uz", "Yozilish turlari soni"),
+        ("COUNT(DISTINCT product)", "ru", "Количество вариантов написания"),
         ("EXTRACT(ISODOW FROM deal_date)", "ru", "Дата сделки: день недели"),
         ("EXTRACT(HOUR FROM deal_time)", "ru", "Время: час"),
         ("ABS(amount)", "ru", "Сумма в валюте контракта"),
