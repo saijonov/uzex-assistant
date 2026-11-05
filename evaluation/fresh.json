@@ -1,0 +1,854 @@
+[
+ {
+  "id": "f01",
+  "category": "fresh",
+  "title": "2024-yilning uchinchi choragida nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "2024-yilning uchinchi choragida nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "30846"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f03",
+  "category": "fresh",
+  "title": "2025-yilda dollar kursi eng yuqori bo'lgan kun qaysi?",
+  "turns": [
+   {
+    "q": "2025-yilda dollar kursi eng yuqori bo'lgan kun qaysi?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "12666.90"
+    ],
+    "any_in_text": [
+     "11.04.2025",
+     "2025-04-11"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f04",
+  "category": "fresh",
+  "title": "Kimyo sanoatida 2025-yilda nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "Kimyo sanoatida 2025-yilda nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "9081"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f05",
+  "category": "fresh",
+  "title": "2024 йилда экспорт битимлари нечта бўлган?",
+  "turns": [
+   {
+    "q": "2024 йилда экспорт битимлари нечта бўлган?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "1327"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f06",
+  "category": "fresh",
+  "title": "2023 da eng kop bitim qilgan sotuvchi kim",
+  "turns": [
+   {
+    "q": "2023 da eng kop bitim qilgan sotuvchi kim",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "969242385",
+     "4735"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f07",
+  "category": "fresh",
+  "title": "Покажи самую последнюю сделку в реестре",
+  "turns": [
+   {
+    "q": "Покажи самую последнюю сделку в реестре",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "604956"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f08",
+  "category": "fresh",
+  "title": "100100-shartnoma bo'yicha nechta bitim tuzilgan va ularning ",
+  "turns": [
+   {
+    "q": "100100-shartnoma bo'yicha nechta bitim tuzilgan va ularning jami summasi qancha?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "267"
+    ],
+    "any_in_text": [
+     "204712415751",
+     "234571136475"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f09",
+  "category": "fresh",
+  "title": "Samarqandlik xaridorlar 2025-yilda nechta bitim qilgan?",
+  "turns": [
+   {
+    "q": "Samarqandlik xaridorlar 2025-yilda nechta bitim qilgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "8824"
+    ],
+    "not_in_text": [
+     "9 105",
+     "9,105",
+     "9105"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f10",
+  "category": "fresh",
+  "title": "Sotuvchi va xaridor brokeri bir xil bo'lgan bitimlar nechta?",
+  "turns": [
+   {
+    "q": "Sotuvchi va xaridor brokeri bir xil bo'lgan bitimlar nechta?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "4562"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f11",
+  "category": "fresh",
+  "title": "В какой час дня заключается больше всего сделок?",
+  "turns": [
+   {
+    "q": "В какой час дня заключается больше всего сделок?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "71692"
+    ],
+    "any_in_text": [
+     "13"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f12",
+  "category": "fresh",
+  "title": "Bitim raqamlarida nechta raqam tushib qolgan?",
+  "turns": [
+   {
+    "q": "Bitim raqamlarida nechta raqam tushib qolgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "4956"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f13",
+  "category": "fresh",
+  "title": "Сколько сделок заключено после окончания срока действия конт",
+  "turns": [
+   {
+    "q": "Сколько сделок заключено после окончания срока действия контракта?",
+    "outcomes": [
+     "answer",
+     "no_match"
+    ],
+    "language": "ru",
+    "any_in_text": [
+     "0",
+     "нет",
+     "Нет",
+     "Записей по этим условиям нет"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f14",
+  "category": "fresh",
+  "title": "На сколько сумов вырос курс доллара за 2025 год?",
+  "turns": [
+   {
+    "q": "На сколько сумов вырос курс доллара за 2025 год?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "any_in_text": [
+     "137.13",
+     "142.42"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f15",
+  "category": "fresh",
+  "title": "Какая доля высоколиквидных товаров в общей сумме сделок за 2",
+  "turns": [
+   {
+    "q": "Какая доля высоколиквидных товаров в общей сумме сделок за 2025 год?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "any_in_text": [
+     "91.72",
+     "91,72"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f19",
+  "category": "fresh",
+  "title": "Qurilish kompaniyalari 2025-yilda xaridor sifatida qancha su",
+  "turns": [
+   {
+    "q": "Qurilish kompaniyalari 2025-yilda xaridor sifatida qancha summaga xarid qilgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "any_in_text": [
+     "357422740403"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f20",
+  "category": "fresh",
+  "title": "Qisman bajarilgan bitimlarda hajmning o'rtacha necha foizi y",
+  "turns": [
+   {
+    "q": "Qisman bajarilgan bitimlarda hajmning o'rtacha necha foizi yetkazilgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "any_in_text": [
+     "61.39"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f21",
+  "category": "fresh",
+  "title": "Сколько тонн цемента продано в 2025 году?",
+  "turns": [
+   {
+    "q": "Сколько тонн цемента продано в 2025 году?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "1325527"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f23",
+  "category": "fresh",
+  "title": "2025-yil aylanmasi bo'yicha Jizzax va Navoiy viloyatlarini s",
+  "turns": [
+   {
+    "q": "2025-yil aylanmasi bo'yicha Jizzax va Navoiy viloyatlarini solishtir",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "1977040408511.9",
+     "2258638212222.24"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f24",
+  "category": "fresh",
+  "title": "Были ли сделки в субботу или воскресенье?",
+  "turns": [
+   {
+    "q": "Были ли сделки в субботу или воскресенье?",
+    "outcomes": [
+     "answer",
+     "no_match"
+    ],
+    "language": "ru",
+    "any_in_text": [
+     "0",
+     "нет",
+     "Нет",
+     "Записей по этим условиям нет"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f25",
+  "category": "fresh",
+  "title": "2025-yilda yevro kursi qancha bo'lgan?",
+  "turns": [
+   {
+    "q": "2025-yilda yevro kursi qancha bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "f26",
+  "category": "fresh",
+  "title": "Кто директор компании Zoket Invest?",
+  "turns": [
+   {
+    "q": "Кто директор компании Zoket Invest?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "f27",
+  "category": "fresh",
+  "title": "Eksport bitimlari qaysi davlatlarga ketgan?",
+  "turns": [
+   {
+    "q": "Eksport bitimlari qaysi davlatlarga ketgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "f28",
+  "category": "fresh",
+  "title": "Kecha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "Kecha nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer",
+     "no_match",
+     "unavailable"
+    ],
+    "language": "uz",
+    "not_in_text": [
+     "964"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f29",
+  "category": "fresh",
+  "title": "Summasi eng katta eksport bitimi qaysi?",
+  "turns": [
+   {
+    "q": "Summasi eng katta eksport bitimi qaysi?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "547500"
+    ]
+   },
+   {
+    "q": "xaridori kim?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "919788432"
+    ]
+   },
+   {
+    "q": "shu xaridor jami nechta bitim qilgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "20"
+    ],
+    "not_in_text": [
+     "500 000",
+     "500000"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f30",
+  "category": "fresh",
+  "title": "2024-yilda nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "2024-yilda nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "106647"
+    ]
+   },
+   {
+    "q": "а сколько из них экспортных?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "1327"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f31",
+  "category": "fresh",
+  "title": "Какой товар чаще всего продавали в Андижане?",
+  "turns": [
+   {
+    "q": "Какой товар чаще всего продавали в Андижане?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "any_in_text": [
+     "ПОРТЛАНДЦЕМЕНТ",
+     "Портландцемент",
+     "портландцемент",
+     "цемент"
+    ]
+   },
+   {
+    "q": "а в Навои?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "any_in_text": [
+     "Хлопок",
+     "хлопок",
+     "ХЛОПОК"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f32",
+  "category": "fresh",
+  "title": "2024-yilda summa bo'yicha eng yirik 2 ta sotuvchi kim?",
+  "turns": [
+   {
+    "q": "2024-yilda summa bo'yicha eng yirik 2 ta sotuvchi kim?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "937937230",
+     "917899526"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f34",
+  "category": "fresh",
+  "title": "Buxorodagi brokerlar 2025-yilda nechta bitimda qatnashgan?",
+  "turns": [
+   {
+    "q": "Buxorodagi brokerlar 2025-yilda nechta bitimda qatnashgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "16149"
+    ],
+    "not_in_text": [
+     "16 654",
+     "16654",
+     "10 011",
+     "10011"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p01",
+  "category": "fresh",
+  "title": "Eng ko'p sotilgan 5 ta tovar qaysi?",
+  "turns": [
+   {
+    "q": "Eng ko'p sotilgan 5 ta tovar qaysi?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "103912",
+     "39146",
+     "38623",
+     "31906",
+     "28747"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p02",
+  "category": "fresh",
+  "title": "Какой товар принёс наибольшую сумму сделок?",
+  "turns": [
+   {
+    "q": "Какой товар принёс наибольшую сумму сделок?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "46113380752063.22"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p03",
+  "category": "fresh",
+  "title": "Toshkent shahrida summa bo'yicha eng ko'p sotilgan tovar qay",
+  "turns": [
+   {
+    "q": "Toshkent shahrida summa bo'yicha eng ko'p sotilgan tovar qaysi?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "10180230978677.00"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p04",
+  "category": "fresh",
+  "title": "Какой товар чаще всего продавали в Кашкадарье?",
+  "turns": [
+   {
+    "q": "Какой товар чаще всего продавали в Кашкадарье?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "7401"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p05",
+  "category": "fresh",
+  "title": "Kimyo sanoatida bitimlar soni bo'yicha eng ko'p sotilgan tov",
+  "turns": [
+   {
+    "q": "Kimyo sanoatida bitimlar soni bo'yicha eng ko'p sotilgan tovar qaysi?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "11285"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p06",
+  "category": "fresh",
+  "title": "Zoket Invest eng ko'p qaysi tovarni sotib olgan?",
+  "turns": [
+   {
+    "q": "Zoket Invest eng ko'p qaysi tovarni sotib olgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "5547",
+     "2427818431834.82"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p07",
+  "category": "fresh",
+  "title": "АИ-92 benzin bo'yicha 2025-yilda nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "АИ-92 benzin bo'yicha 2025-yilda nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "2375"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p08",
+  "category": "fresh",
+  "title": "2025-yilda 1-navli un bo'yicha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "2025-yilda 1-navli un bo'yicha nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "1527"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p09",
+  "category": "fresh",
+  "title": "Eng arzon bitim qaysi?",
+  "turns": [
+   {
+    "q": "Eng arzon bitim qaysi?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "103585"
+    ],
+    "not_in_text": [
+     "345366"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p10",
+  "category": "fresh",
+  "title": "Самая дорогая сделка в 2023 году?",
+  "turns": [
+   {
+    "q": "Самая дорогая сделка в 2023 году?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "247890"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p11",
+  "category": "fresh",
+  "title": "Какая самая дешёвая сделка?",
+  "turns": [
+   {
+    "q": "Какая самая дешёвая сделка?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "103585"
+    ],
+    "not_in_text": [
+     "345366"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p13",
+  "category": "fresh",
+  "title": "2025-yilda har bir sanoat tarmog'ida bitimlar soni bo'yicha ",
+  "turns": [
+   {
+    "q": "2025-yilda har bir sanoat tarmog'ida bitimlar soni bo'yicha eng ko'p sotilgan tovar qaysi?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "25957",
+     "8837",
+     "7208",
+     "6576",
+     "2944",
+     "2565",
+     "913",
+     "777",
+     "492",
+     "415"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p14",
+  "category": "fresh",
+  "title": "Mazut bo'yicha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "Mazut bo'yicha nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "4775"
+    ],
+    "not_in_text": [
+     "33522",
+     "33 522"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p15",
+  "category": "fresh",
+  "title": "Сколько сделок по дизельному топливу?",
+  "turns": [
+   {
+    "q": "Сколько сделок по дизельному топливу?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "28747"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p16",
+  "category": "fresh",
+  "title": "Kombikorm bo'yicha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "Kombikorm bo'yicha nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "any_in_text": [
+     "595",
+     "3264",
+     "3 264"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "p17",
+  "category": "fresh",
+  "title": "В каком месяце 2025 года было больше всего сделок?",
+  "turns": [
+   {
+    "q": "В каком месяце 2025 года было больше всего сделок?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "17808",
+     "Октябрь"
+    ]
+   }
+  ]
+ }
+]
