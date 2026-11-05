@@ -127,3 +127,28 @@ Regression on the cheap model, `gpt-6-luna` with low effort: the natural convers
 Offline: 785 tests passed and 3 skipped, with lint and format checks passing. The dataset was reimported for `amount_usd` and the days fields.
 
 Limits of these results. The 100/100 run came before the last two commits, and only the 18 affected questions were repeated afterwards. The questions were written before the code and then used to fix it, so this score is not an estimate for unseen questions. The natural, main and challenge sets were run in full only on the cheap model this round. No real Telegram account has tested this version, so multi-part messages have not been seen in the Telegram app.
+
+## Fresh questions, live
+
+`evaluation/fresh.json` holds questions that were not used to fix the code before they ran. Expected values were calculated from the raw tables and saved before any model call. The first batch had 31 conversations and 35 messages on `gpt-6.1-sol`, medium effort.
+
+| Run | Model | Passed | P95 | Slowest |
+|---|---|---:|---:|---:|
+| First batch, as graded | `gpt-6.1-sol`, medium | 25/31 | 9.052 s | 11.526 s |
+| Second batch, 16 questions aimed at products | `gpt-6.1-sol`, medium | 13/16 | 46.698 s | 46.698 s |
+| Fixes rechecked on the final code | `gpt-6.1-sol`, medium | 5/5 | 9.957 s | 9.957 s |
+| Chat replay, 8 turns | `gpt-6.1-sol`, medium | 8/8 | 16.972 s | 16.972 s |
+| Cheap-model failures rechecked | `gpt-6.1-sol`, medium | 12/13 | 24.469 s | 24.469 s |
+
+Read by hand, 28 of the first 31 replies were fully right. Four graded failures were expectations that were too strict: a month shown as a number, two correct zero results recorded as `no_match`, and delivered shares correctly split by unit. Two questions asked for a metric instead of answering. One passing reply named the right good with too low a count, which exposed the main defect.
+
+That defect: `product_family` merged spellings only, so a seller who wrote a grade or brand into the name created a separate product. There were 136 names for 43 goods, and rankings were wrong. Deals gave cotton, cement, diesel as the top three, while wheat really outranks diesel, 38,623 to 28,747. In a comparison of 58 rankings by region, year and industry, 8 changed winner. Goods now merge by HS code, and the dataset was reimported.
+
+In the second batch, three errors came from the computer, not the code. The power log shows the lid closed for 306 seconds during the run, on battery, and the three questions in progress failed. All three then passed. API calls now retry twice, inside the 75 second limit.
+
+Regression on the cheap model, `gpt-6-luna` with low effort: tricky 91/101, natural conversations 91/96, main 99/100, challenge 31/32. The conversation failures, other than two where the only miss was a tax number left out of a correct reply, were rerun on `gpt-6.1-sol` with the 12/13 above. The remaining one is `unit_price_after_asking_uz`: its first reply asks which unit but is recorded as `unavailable`, and its second turn gives the correct deal, 588263.
+
+Offline: 789 tests passed and 3 skipped, with lint and format checks passing.
+
+Limits of these results. 28 of 31 is one small sample of questions I wrote, not a measure of what judges will ask. The fixes were aimed at those questions, so no unseen score exists for the final code. The full 100 tricky questions ran on the production model only before these changes, and on the cheap model after them. Nothing here was tested in the real Telegram app.
+
