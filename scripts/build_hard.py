@@ -40,8 +40,9 @@ def middle_value(values: list[Decimal]) -> Decimal:
     return (ordered[middle - 1] + ordered[middle]) / 2
 
 
-def spelling_key(product: str) -> str:
-    return re.sub(r"[^0-9a-zа-яё]+", " ", product.lower()).strip()
+def good_key(card: dict) -> str:
+    mark = re.search(r"спот|форвард|фьючерс|мазут", card["Наименование продукта"].lower())
+    return f"{card['Код ТН ВЭД']} {mark.group() if mark else ''}".strip()
 
 
 def facts(archive: Path) -> dict:
@@ -116,7 +117,7 @@ def facts(archive: Path) -> dict:
                         sellers_2025.add(row["ИНН продавца"])
                         buyers_2025.add(row["ИНН покупателя"])
                         out["buyer_2025"][row["ИНН покупателя"]] += 1
-                        out["family_2025"][spelling_key(card["Наименование продукта"])] += 1
+                        out["family_2025"][good_key(card)] += 1
                         if status == CANCELLED:
                             cancelled_2025 += 1
                         if usd:
@@ -216,7 +217,7 @@ def turn(q, *outcomes, language=None, **expect):
 def build(archive: Path) -> list[dict]:
     f = facts(archive)
     top_family, top_family_count = f["family_2025"].most_common(1)[0]
-    if "хлопок" not in top_family:
+    if top_family != "520100 спот":
         raise ValueError("The top product changed; review these cases")
     brokers = f["broker_deals"].most_common(3)
     earners = sorted(f["broker_turnover"].items(), key=lambda item: -item[1])[:3]
