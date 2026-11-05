@@ -178,3 +178,28 @@ def test_russian_reply_for_a_name_not_in_the_registry():
     text = render_answer(answer)
     assert "В реестре нет названия «Zoket Trade»" in text
     assert "Похожие названия" in text
+
+
+async def test_a_not_found_reply_lists_no_similar_products(monkeypatch, sample_database):
+    rows = [
+        {
+            "name": "Сжиженный газ Марка ПБА",
+            "product_family": "СЖИЖЕННЫЙ ГАЗ",
+            "match": "fuzzy",
+            "score": 80.0,
+        }
+    ]
+    monkeypatch.setattr(sample_database, "lookup", lambda kind, text: rows)
+    end = finish("unavailable", None, "not_found")
+    end[1]["candidates_query_id"] = "lookup_1"
+    client = ScriptedClient(
+        [
+            ("lookup_entities", {"kind": "product", "text": "Tabiiy gaz"}),
+            end,
+        ]
+    )
+    engine = Engine(Settings(_env_file=None), client, sample_database)
+    answer = await engine.answer("Tabiiy gaz bo'yicha nechta bitim bo'lgan?")
+    assert answer.outcome == "unavailable"
+    assert answer.candidates == []
+    assert "Сжиженный" not in render_answer(answer)

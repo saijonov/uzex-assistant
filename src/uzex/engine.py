@@ -512,7 +512,11 @@ class Engine:
                                 raise ValueError(gap)
                         if finish.outcome in {"clarify", "unavailable"} and finish.reason == "none":
                             raise ValueError("A fixed clarification or absence reason is required")
-                        candidates = lookups.get(finish.candidates_query_id, [])[:5]
+                        candidates = (
+                            []
+                            if finish.outcome == "unavailable"
+                            else lookups.get(finish.candidates_query_id, [])[:5]
+                        )
                         only_lookalikes = (
                             finish.outcome == "clarify"
                             and finish.reason == "ambiguous_entity"
