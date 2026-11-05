@@ -26,7 +26,7 @@ make test
 make bot
 ```
 
-On macOS, install the local restart service instead of running a foreground bot:
+The live bot runs on a server; see [Server deployment](#server-deployment). To run it on a Mac instead, install the local restart service rather than a foreground bot:
 
 ```sh
 PYTHONPATH=src uv run uzex install-service
@@ -84,7 +84,29 @@ docker compose ps
 docker compose logs --tail 50 bot
 ```
 
-Stop the local macOS instance before starting the server instance. Keep credentials out of image build arguments and source control. The container runs as user 10001, mounts the dataset read-only and stores jobs in the persistent `var/` directory. Docker health checks verify the dataset and polling heartbeat.
+Stop the local macOS instance before starting the server instance. Keep credentials out of image build arguments and source control. The container runs as user 10001, mounts the dataset read-only and stores jobs in the persistent `var/` directory. Docker health checks verify the dataset and polling heartbeat. The container restarts after a crash and after a server reboot.
+
+The live bot runs this way on an always-on Ubuntu server. Access details are in the local `server/` folder, which git ignores, and `uzex-server` below is a host in `~/.ssh/config`. To update it, copy only committed files and rebuild:
+
+```sh
+git archive HEAD | ssh uzex-server 'tar -x -C ~/uzex'
+ssh uzex-server 'cd ~/uzex && docker compose up -d --build --wait'
+```
+
+When a version changes derived fields, run `make import` locally and copy `data/` to the server too, with the bot stopped. Check the bot with:
+
+```sh
+ssh uzex-server 'cd ~/uzex && docker compose ps && docker compose logs --tail 20 bot'
+ssh uzex-server 'cd ~/uzex && docker compose exec -T bot /app/.venv/bin/uzex health'
+```
+
+Only one copy may poll Telegram, so the macOS service is disabled and will not start at login. To move back to the Mac:
+
+```sh
+ssh uzex-server 'cd ~/uzex && docker compose down'
+launchctl enable gui/$(id -u)/uzex21.assistant
+PYTHONPATH=src uv run uzex install-service
+```
 
 ## Documentation
 
