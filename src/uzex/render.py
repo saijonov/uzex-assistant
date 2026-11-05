@@ -179,6 +179,20 @@ DAY_NAMES = (
     ("Shanba", "Суббота"),
 )
 ENGLISH_DAYS = ("Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday")
+MONTH_NAMES = (
+    ("Yanvar", "Январь"),
+    ("Fevral", "Февраль"),
+    ("Mart", "Март"),
+    ("Aprel", "Апрель"),
+    ("May", "Май"),
+    ("Iyun", "Июнь"),
+    ("Iyul", "Июль"),
+    ("Avgust", "Август"),
+    ("Sentabr", "Сентябрь"),
+    ("Oktabr", "Октябрь"),
+    ("Noyabr", "Ноябрь"),
+    ("Dekabr", "Декабрь"),
+)
 
 
 def tr(values: tuple[str, str], language: str) -> str:
@@ -414,6 +428,8 @@ def value_field(expression: str) -> str | None:
         return "day_of_week"
     if re.fullmatch(r"(?:STRFTIME|TIME_TO_STR)\(.*'%A'\)", expression, re.IGNORECASE):
         return "day_name"
+    if re.match(r"EXTRACT\(MONTH\b", expression, re.IGNORECASE):
+        return "month_number"
     return "date_part" if re.match(r"EXTRACT\(", expression, re.IGNORECASE) else None
 
 
@@ -443,6 +459,8 @@ def format_value(value, language: str, field: str | None = None) -> str:
         return tr(DAY_NAMES[int(value) % 7], language)
     if field == "day_name" and value in ENGLISH_DAYS:
         return tr(DAY_NAMES[ENGLISH_DAYS.index(value)], language)
+    if field == "month_number" and str(value).isdigit() and 1 <= int(value) <= 12:
+        return tr(MONTH_NAMES[int(value) - 1], language)
     number = str(value)
     if field in {"amount", "amount_uzs", "amount_usd"} and re.fullmatch(r"-?\d+(?:\.\d+)?", number):
         number = str(Decimal(number).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))

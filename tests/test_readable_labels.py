@@ -66,3 +66,15 @@ def test_days_of_the_week_are_shown_by_name(sample_database):
 def test_conditions_read_naturally(condition, expected):
     node = sqlglot.parse_one(f"SELECT 1 FROM t WHERE {condition}", read="duckdb").args["where"].this
     assert expected in describe_condition(node, "ru")
+
+
+@pytest.mark.parametrize("language,name", [("uz", "Oktabr"), ("ru", "Октябрь")])
+def test_a_month_is_shown_by_its_name(sample_database, language, name):
+    data = sample_database.query(
+        "SELECT EXTRACT(MONTH FROM deal_date) AS month, COUNT(*) AS n FROM registry "
+        "GROUP BY EXTRACT(MONTH FROM deal_date)",
+        "q1",
+    )
+    data.rows[0]["month"] = 10
+    text = render_answer(Answer(outcome="answer", language=language, evidence=data))
+    assert name in text
