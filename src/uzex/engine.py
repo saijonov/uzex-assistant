@@ -111,6 +111,10 @@ TOOLS = [
 ]
 
 
+def is_lookalike_only(candidates: list[dict]) -> bool:
+    return bool(candidates) and all(row.get("match") == "fuzzy" for row in candidates)
+
+
 class Engine:
     def __init__(self, settings: Settings, client=None, database=None):
         self.settings = settings
@@ -302,12 +306,17 @@ class Engine:
                                 language=language or clarification.language,
                                 reason="needs_detail",
                             )
+                        candidates = lookups.get(clarification.candidates_query_id, [])[:5]
+                        only_lookalikes = "entity" in clarification.fields and is_lookalike_only(
+                            candidates
+                        )
                         return Answer(
                             outcome="clarify",
                             language=language or clarification.language,
-                            reason="missing_details",
+                            reason="name_not_found" if only_lookalikes else "missing_details",
+                            identifier=review.entity_text if only_lookalikes else None,
                             missing_fields=clarification.fields,
-                            candidates=lookups.get(clarification.candidates_query_id, [])[:5],
+                            candidates=candidates,
                             continues_pending=review.continuation,
                         )
                     elif call.name == "about_previous_result":
@@ -503,13 +512,20 @@ class Engine:
                                 raise ValueError(gap)
                         if finish.outcome in {"clarify", "unavailable"} and finish.reason == "none":
                             raise ValueError("A fixed clarification or absence reason is required")
+                        candidates = lookups.get(finish.candidates_query_id, [])[:5]
+                        only_lookalikes = (
+                            finish.outcome == "clarify"
+                            and finish.reason == "ambiguous_entity"
+                            and is_lookalike_only(candidates)
+                        )
                         return Answer(
                             outcome=finish.outcome,
                             language=language or finish.language,
-                            reason=finish.reason,
+                            reason="name_not_found" if only_lookalikes else finish.reason,
+                            identifier=review.entity_text if only_lookalikes else None,
                             evidence=data,
                             extra_evidence=extras,
-                            candidates=lookups.get(finish.candidates_query_id, [])[:5],
+                            candidates=candidates,
                             continues_pending=review.continuation,
                         )
                     else:

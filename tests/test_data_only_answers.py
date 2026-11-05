@@ -1,9 +1,11 @@
 import pytest
-from test_engine import ScriptedClient, finish
+from test_engine import ScriptedClient, finish, review
 
 from uzex.config import Settings
 from uzex.engine import Engine
+from uzex.models import Answer
 from uzex.policy import unnamed_code
+from uzex.render import render_answer
 
 WINTER = "SELECT COUNT(*) AS n FROM registry WHERE LOWER(product_name) LIKE '%дт-з-к5%'"
 GRADE = "SELECT COUNT(*) AS n FROM registry WHERE LOWER(product_name) LIKE '%м0к%'"
@@ -106,3 +108,73 @@ async def test_a_code_the_user_typed_is_allowed(sample_database):
     engine = Engine(Settings(_env_file=None), client, sample_database)
     answer = await engine.answer("М0к bo'yicha nechta bitim?")
     assert answer.outcome == "answer"
+
+
+def lookalike(monkeypatch, sample_database, match):
+    rows = [
+        {"inn": "938371632", "name": "Zo‘kot Trade", "role": "x", "match": match, "score": 90.0}
+    ]
+    monkeypatch.setattr(sample_database, "lookup", lambda kind, text: rows)
+
+
+def company_review():
+    return review(
+        language="uz", subject="company", reference="specified", entity_text="Zoket Trade"
+    )
+
+
+async def test_only_lookalike_names_say_the_name_is_not_in_the_registry(
+    monkeypatch, sample_database
+):
+    lookalike(monkeypatch, sample_database, "fuzzy")
+    client = ScriptedClient(
+        [
+            company_review(),
+            ("lookup_entities", {"kind": "company", "text": "Zoket Trade"}),
+            (
+                "ask_clarification",
+                {"language": "uz", "fields": ["entity"], "candidates_query_id": "lookup_1"},
+            ),
+        ],
+    )
+    engine = Engine(Settings(_env_file=None), client, sample_database)
+    answer = await engine.answer("Zoket Trade nechta bitim qilgan?")
+    assert answer.reason == "name_not_found"
+    assert answer.identifier == "Zoket Trade"
+    text = render_answer(answer)
+    assert "«Zoket Trade» nomi yo‘q" in text
+    assert "O‘xshash nomlar" in text
+    assert "1. Zo‘kot Trade" in text
+    assert "Qaysi bitim" not in text
+
+
+async def test_an_exact_or_partial_name_still_asks_which_one(monkeypatch, sample_database):
+    lookalike(monkeypatch, sample_database, "partial")
+    client = ScriptedClient(
+        [
+            company_review(),
+            ("lookup_entities", {"kind": "company", "text": "Zoket"}),
+            (
+                "ask_clarification",
+                {"language": "uz", "fields": ["entity"], "candidates_query_id": "lookup_1"},
+            ),
+        ],
+    )
+    engine = Engine(Settings(_env_file=None), client, sample_database)
+    answer = await engine.answer("Zoket nechta bitim qilgan?")
+    assert answer.reason == "missing_details"
+    assert "Qaysi bitim" in render_answer(answer)
+
+
+def test_russian_reply_for_a_name_not_in_the_registry():
+    answer = Answer(
+        outcome="clarify",
+        language="ru",
+        reason="name_not_found",
+        identifier="Zoket Trade",
+        missing_fields=["entity"],
+        candidates=[{"name": "Zo‘kot Trade", "inn": "938371632"}],
+    )
+    text = render_answer(answer)
+    assert "В реестре нет названия «Zoket Trade»" in text
+    assert "Похожие названия" in text

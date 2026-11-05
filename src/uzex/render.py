@@ -738,6 +738,20 @@ def wrong_length_text(answer: Answer) -> list[str]:
     return lines
 
 
+def name_not_found_text(answer: Answer) -> list[str]:
+    name = answer.identifier
+    first = (
+        (f"Reyestrda «{name}» nomi yo‘q.", f"В реестре нет названия «{name}».")
+        if name
+        else TEXT["not_found"]
+    )
+    hint = (
+        "O‘xshash nomlar (kerakli bo‘lsa, raqamini yozing):",
+        "Похожие названия (если нужно одно из них, напишите его номер):",
+    )
+    return [tr(first, answer.language), tr(hint, answer.language)]
+
+
 def render_answer(answer: Answer, page: int = 0) -> str:
     lang = answer.language
     if answer.outcome == "error":
@@ -757,6 +771,8 @@ def render_answer(answer: Answer, page: int = 0) -> str:
                     lang,
                 )
             ]
+        elif answer.reason == "name_not_found":
+            lines = name_not_found_text(answer)
         elif answer.missing_fields:
             lines = [tr(CLARIFICATION_TEXT[field], lang) for field in answer.missing_fields]
         else:
