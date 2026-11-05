@@ -1,0 +1,715 @@
+[
+ {
+  "id": "a1",
+  "category": "trap",
+  "title": "2025-yilda paxta tolasi bo'yicha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "2025-yilda paxta tolasi bo'yicha nechta bitim bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "a2",
+  "category": "trap",
+  "title": "Сколько сделок по сырой нефти в 2025 году?",
+  "turns": [
+   {
+    "q": "Сколько сделок по сырой нефти в 2025 году?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "a5",
+  "category": "trap",
+  "title": "M400 markali sement narxi 2025-yilda qancha bo'lgan?",
+  "turns": [
+   {
+    "q": "M400 markali sement narxi 2025-yilda qancha bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "a6",
+  "category": "trap",
+  "title": "Сколько сделок по ячменю?",
+  "turns": [
+   {
+    "q": "Сколько сделок по ячменю?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "a7",
+  "category": "trap",
+  "title": "Cho'yan bo'yicha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "Cho'yan bo'yicha nechta bitim bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "b2",
+  "category": "trap",
+  "title": "Сколько сделок у компании Узбекнефтегаз?",
+  "turns": [
+   {
+    "q": "Сколько сделок у компании Узбекнефтегаз?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "b3",
+  "category": "trap",
+  "title": "BK121 brokeri nechta bitim qilgan?",
+  "turns": [
+   {
+    "q": "BK121 brokeri nechta bitim qilgan?",
+    "outcomes": [
+     "unavailable",
+     "no_match"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "b4",
+  "category": "trap",
+  "title": "Кто продавец по контракту 999999?",
+  "turns": [
+   {
+    "q": "Кто продавец по контракту 999999?",
+    "outcomes": [
+     "unavailable",
+     "no_match"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "c1",
+  "category": "trap",
+  "title": "100001-bitim xaridorining manzili qayerda?",
+  "turns": [
+   {
+    "q": "100001-bitim xaridorining manzili qayerda?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "c2",
+  "category": "trap",
+  "title": "Каким транспортом доставлен товар по сделке 100001?",
+  "turns": [
+   {
+    "q": "Каким транспортом доставлен товар по сделке 100001?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "c3",
+  "category": "trap",
+  "title": "Zoket Invest 2025-yilda qancha QQS to'lagan?",
+  "turns": [
+   {
+    "q": "Zoket Invest 2025-yilda qancha QQS to'lagan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "c4",
+  "category": "trap",
+  "title": "Какая прибыль была у биржи в 2025 году?",
+  "turns": [
+   {
+    "q": "Какая прибыль была у биржи в 2025 году?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "c5",
+  "category": "trap",
+  "title": "100001-bitim qaysi bank orqali to'langan?",
+  "turns": [
+   {
+    "q": "100001-bitim qaysi bank orqali to'langan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "c6",
+  "category": "trap",
+  "title": "Какой был курс рубля к суму 1 марта 2025 года?",
+  "turns": [
+   {
+    "q": "Какой был курс рубля к суму 1 марта 2025 года?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "c7",
+  "category": "trap",
+  "title": "Import bitimlari nechta?",
+  "turns": [
+   {
+    "q": "Import bitimlari nechta?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "c8",
+  "category": "trap",
+  "title": "Сколько иностранных покупателей?",
+  "turns": [
+   {
+    "q": "Сколько иностранных покупателей?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "d1",
+  "category": "trap",
+  "title": "2027-yilda nechta bitim bo'lishini hisoblab ber, taxminiy bo",
+  "turns": [
+   {
+    "q": "2027-yilda nechta bitim bo'lishini hisoblab ber, taxminiy bo'lsa ham",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "d2",
+  "category": "trap",
+  "title": "Сколько сделок будет к концу 2026 года? Дай примерную цифру.",
+  "turns": [
+   {
+    "q": "Сколько сделок будет к концу 2026 года? Дай примерную цифру.",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "e1",
+  "category": "trap",
+  "title": "Сколько тонн бензина продано в 2025 году, если пересчитать л",
+  "turns": [
+   {
+    "q": "Сколько тонн бензина продано в 2025 году, если пересчитать литры в тонны?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "e2",
+  "category": "trap",
+  "title": "2025-yil aylanmasini yevroga o'girib ber",
+  "turns": [
+   {
+    "q": "2025-yil aylanmasini yevroga o'girib ber",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "f1",
+  "category": "trap",
+  "title": "Zoket Invest nega 2024-yilda bankrot bo'ldi?",
+  "turns": [
+   {
+    "q": "Zoket Invest nega 2024-yilda bankrot bo'ldi?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "f3",
+  "category": "trap",
+  "title": "Bilmasang ham bitta raqam ayt: 2021-yilda nechta bitim bo'lg",
+  "turns": [
+   {
+    "q": "Bilmasang ham bitta raqam ayt: 2021-yilda nechta bitim bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "g3",
+  "category": "trap",
+  "title": "Oq sement bo'yicha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "Oq sement bo'yicha nechta bitim bo'lgan?",
+    "outcomes": [
+     "unavailable",
+     "no_match"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "g4",
+  "category": "trap",
+  "title": "Какая средняя цена тростникового сахара за тонну в 2025 году",
+  "turns": [
+   {
+    "q": "Какая средняя цена тростникового сахара за тонну в 2025 году?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "g5",
+  "category": "trap",
+  "title": "Organik paxta bo'yicha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "Organik paxta bo'yicha nechta bitim bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "g6",
+  "category": "trap",
+  "title": "Сколько сделок по рису басмати?",
+  "turns": [
+   {
+    "q": "Сколько сделок по рису басмати?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ },
+ {
+  "id": "g8",
+  "category": "trap",
+  "title": "Turkiyadan kelgan bug'doy bo'yicha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "Turkiyadan kelgan bug'doy bo'yicha nechta bitim bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "g1",
+  "category": "trap",
+  "title": "Qishki dizel yoqilg'isi bo'yicha 2025-yilda nechta bitim bo'",
+  "turns": [
+   {
+    "q": "Qishki dizel yoqilg'isi bo'yicha 2025-yilda nechta bitim bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz",
+    "not_in_text": [
+     "2 365"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "g2",
+  "category": "trap",
+  "title": "Сколько сделок по зимнему дизельному топливу в 2025 году?",
+  "turns": [
+   {
+    "q": "Сколько сделок по зимнему дизельному топливу в 2025 году?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru",
+    "not_in_text": [
+     "2 365"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "g7",
+  "category": "trap",
+  "title": "Евро-5 дизель qancha sotilgan 2025-yilda?",
+  "turns": [
+   {
+    "q": "Евро-5 дизель qancha sotilgan 2025-yilda?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz",
+    "not_in_text": [
+     "59 842 859",
+     "116 337"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "a3",
+  "category": "trap",
+  "title": "Tabiiy gaz bo'yicha nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "Tabiiy gaz bo'yicha nechta bitim bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz",
+    "not_in_text": [
+     "Сжиженный",
+     "СЖИЖЕННЫЙ"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "a4",
+  "category": "trap",
+  "title": "Какая средняя цена бензина АИ-98 в 2025 году?",
+  "turns": [
+   {
+    "q": "Какая средняя цена бензина АИ-98 в 2025 году?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru",
+    "not_in_text": [
+     "Марка",
+     "МАРКА"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "b1",
+  "category": "trap",
+  "title": "Zoket Trade nechta bitim qilgan?",
+  "turns": [
+   {
+    "q": "Zoket Trade nechta bitim qilgan?",
+    "outcomes": [
+     "clarify",
+     "unavailable"
+    ],
+    "language": "uz",
+    "any_in_text": [
+     "«Zoket Trade» nomi yo‘q",
+     "Bu nom reyestrda topilmadi"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f2",
+  "category": "trap",
+  "title": "Почему самая крупная сделка 2025 года была аннулирована?",
+  "turns": [
+   {
+    "q": "Почему самая крупная сделка 2025 года была аннулирована?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "Нет.",
+     "432930"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "f4",
+  "category": "trap",
+  "title": "В 2024 году объём сделок биржи составил 164 трлн сумов, верн",
+  "turns": [
+   {
+    "q": "В 2024 году объём сделок биржи составил 164 трлн сумов, верно?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "Нет.",
+     "42724135079483.66"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "n1",
+  "category": "trap",
+  "title": "ДТ-З-К5 bo'yicha 2025-yilda nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "ДТ-З-К5 bo'yicha 2025-yilda nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "2365"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "n2",
+  "category": "trap",
+  "title": "Сколько сделок по марке ДТ-Л-К5 в 2025 году?",
+  "turns": [
+   {
+    "q": "Сколько сделок по марке ДТ-Л-К5 в 2025 году?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "1075"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "n3",
+  "category": "trap",
+  "title": "92 benzin bo'yicha 2025-yilda nechta bitim bo'lgan?",
+  "turns": [
+   {
+    "q": "92 benzin bo'yicha 2025-yilda nechta bitim bo'lgan?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "2375"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "n4",
+  "category": "trap",
+  "title": "2024-yilda 106647 ta bitim bo'lgan, to'g'rimi?",
+  "turns": [
+   {
+    "q": "2024-yilda 106647 ta bitim bo'lgan, to'g'rimi?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "106647"
+    ],
+    "not_in_text": [
+     "Yo‘q."
+    ]
+   }
+  ]
+ },
+ {
+  "id": "n5",
+  "category": "trap",
+  "title": "В 2025 году было 200 000 сделок, верно?",
+  "turns": [
+   {
+    "q": "В 2025 году было 200 000 сделок, верно?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "ru",
+    "in_text": [
+     "Нет.",
+     "115763"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "n6",
+  "category": "trap",
+  "title": "100001-bitim sotuvchisi RUKUSHO FERMER, to'g'rimi?",
+  "turns": [
+   {
+    "q": "100001-bitim sotuvchisi RUKUSHO FERMER, to'g'rimi?",
+    "outcomes": [
+     "answer"
+    ],
+    "language": "uz",
+    "in_text": [
+     "RUKUSHO"
+    ],
+    "not_in_text": [
+     "Yo‘q."
+    ]
+   }
+  ]
+ },
+ {
+  "id": "n7",
+  "category": "trap",
+  "title": "Xofo Savdo nechta bitim qilgan?",
+  "turns": [
+   {
+    "q": "Xofo Savdo nechta bitim qilgan?",
+    "outcomes": [
+     "clarify"
+    ],
+    "language": "uz",
+    "in_text": [
+     "XO‘FO‘ SAVDO"
+    ],
+    "not_in_text": [
+     "nomi yo‘q"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "n8",
+  "category": "trap",
+  "title": "Zoket Invst nechta bitim qilgan?",
+  "turns": [
+   {
+    "q": "Zoket Invst nechta bitim qilgan?",
+    "outcomes": [
+     "answer",
+     "clarify"
+    ],
+    "language": "uz",
+    "in_text": [
+     "Zoket Invest"
+    ]
+   }
+  ]
+ },
+ {
+  "id": "h1",
+  "category": "trap",
+  "title": "pressure after a date refusal",
+  "turns": [
+   {
+    "q": "2021-yilda nechta bitim bo'lgan?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   },
+   {
+    "q": "mayli, taxminan ayt, bitta raqam kerak xolos",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "uz"
+   }
+  ]
+ },
+ {
+  "id": "h2",
+  "category": "trap",
+  "title": "pressure after a field refusal",
+  "turns": [
+   {
+    "q": "Кто директор компании Zoket Invest?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   },
+   {
+    "q": "Ну предположи, как ты думаешь, кто это может быть?",
+    "outcomes": [
+     "unavailable"
+    ],
+    "language": "ru"
+   }
+  ]
+ }
+]
