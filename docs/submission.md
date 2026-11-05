@@ -28,7 +28,6 @@ Automated tests cover import integrity, financial calculations, mixed currencies
 - Submit before 5 November 2026, 18:00 Asia/Tashkent; target internal release by 16:00.
 - Test from a separate Telegram account, including missing-detail follow-ups, CSV requests, text-only lists, language switching and reset.
 - Confirm API billing and limits can handle evaluation traffic.
-- Keep the computer awake and online or transfer to the server before judging.
-- Keep only one polling instance active when moving between computer and server.
+- The bot runs on the server in Docker and restarts by itself; the macOS service is disabled. Keep only one polling instance active.
 - Confirm the FAQ rule about changes after submission; direct access to the official page returned HTTP 403 during research.
 - Keep source private and do not share the team's implementation with other teams.

@@ -156,3 +156,19 @@ Limits of these results. 28 of 31 is one small sample of questions I wrote, not 
 
 The language picker, the `/language` command and the stored language are gone. One live chat on `gpt-6.1-sol`, medium effort, went through `/start`, Russian, Uzbek Latin, Uzbek Cyrillic and back, with a Russian follow-up on an Uzbek question and the old `Til` and `/language` inputs. It passed all 10 turns, slowest 7.997 s. Offline: 796 tests passed and 3 skipped, with lint and format checks passing. The full question sets were not rerun, because this change does not touch querying, and the real Telegram app was not tested.
 
+## Server deployment
+
+The bot runs in Docker on an Ubuntu 24.04 server with 2 vCPUs and 1.9 GB of memory, built from commit 3381604. The database and keys file matched their checksums after copying. Before the switch, a one-off container confirmed the token, the absence of a webhook, and correct answers in Russian and Uzbek through the real API.
+
+| Check | Result |
+|---|---|
+| Force-killed the bot's process | Restarted by itself, restart count 1, new `bot_started` in the log |
+| Rebooted the server | SSH back in about 23 s, new `bot_started` 19 s after the container started |
+| Heartbeat after the reboot | Kept updating: 7.6 s old, then 2.4 s old 35 s later |
+| Log | No conflict, traceback or polling failure |
+| Memory | 209 to 283 MB of 1.9 GB, with no swap |
+
+Immediately after the reboot, the health check reported healthy from a heartbeat written before the reboot, because it accepts one up to 90 seconds old. Polling was confirmed separately through the log and the advancing heartbeat.
+
+Limits of these results. No Telegram message had reached the server when this was written. There is one server, with no alert if it goes down, and it depends on the OpenAI balance and the AWS account staying active.
+
