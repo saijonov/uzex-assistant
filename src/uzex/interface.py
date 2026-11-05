@@ -6,22 +6,17 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup
 from uzex.database import normalize
 
 MENU = {
-    "examples": ("Misollar", "Примеры"),
-    "help": ("Yordam", "Помощь"),
-    "language": ("Til", "Язык"),
-    "reset": ("Yangi suhbat", "Новый диалог"),
+    "examples": ("Misollar / Примеры", "Misollar", "Примеры"),
+    "help": ("Yordam / Помощь", "Yordam", "Помощь", "Til", "Язык"),
+    "reset": ("Yangi suhbat / Новый диалог", "Yangi suhbat", "Новый диалог"),
 }
 COPY = {
-    "intro": (
-        "UZEX21\nBirja bitimlari haqida so‘rang.",
-        "UZEX21\nЗадавайте вопросы о биржевых сделках.",
+    "start": (
+        "UZEX21\nBirja bitimlari haqida o‘zbek yoki rus tilida so‘rang.\n"
+        "Masalan: 100001-bitimning sotuvchisi kim?",
+        "Задавайте вопросы о биржевых сделках на русском или узбекском.\n"
+        "Например: Кто продавец по сделке 100001?",
     ),
-    "choose_language": ("Tilni tanlang / Выберите язык", "Tilni tanlang / Выберите язык"),
-    "ready": (
-        "Savolingizni o‘zbek yoki rus tilida yozing.\nMasalan: 100001-bitimning sotuvchisi kim?",
-        "Задайте вопрос на русском или узбекском.\nНапример: Кто продавец по сделке 100001?",
-    ),
-    "menu": ("Menyu", "Меню"),
     "greeting": (
         "Salom! Birja bitimlari haqida savolingiz bo‘lsa, yozing.",
         "Здравствуйте! Если есть вопрос о биржевых сделках, задавайте.",
@@ -44,11 +39,11 @@ COPY = {
     ),
     "help": (
         "Yordam\nBitim raqami, tovar yoki kompaniya nomini yozing. Hisob uchun davr va birlikni ham ko‘rsating.\n\n"
-        "Menyu tilini o‘zgartirsangiz ham, javob savolingiz tilida bo‘ladi. Boshqa tilda javob kerak bo‘lsa, savolda ayting.\n\n"
+        "O‘zbek yoki rus tilida yozing, javob savolingiz tilida bo‘ladi. Boshqa tilda javob kerak bo‘lsa, savolda ayting.\n\n"
         "CSV kerak bo‘lsa, «CSV qilib ber» deb yozing.\n\n"
         "Bitimlar: 03.01.2022 dan 30.10.2026 gacha.\nBarcha ma’lumotlar o‘ylab topilgan.",
         "Помощь\nУкажите номер сделки, товар или компанию. Для расчёта добавьте период и единицу.\n\n"
-        "Язык меню не меняет язык ответов. Отвечаем на языке вопроса. Другой язык можно попросить в самом вопросе.\n\n"
+        "Пишите на русском или узбекском, ответ придёт на языке вопроса. Другой язык можно попросить в самом вопросе.\n\n"
         "Нужен файл? Напишите «Пришли CSV».\n\n"
         "Сделки: с 03.01.2022 по 30.10.2026.\nВсе данные вымышленные.",
     ),
@@ -76,6 +71,10 @@ COPY = {
 
 def text(key: str, language: str) -> str:
     return COPY[key][1 if language == "ru" else 0]
+
+
+def both(key: str) -> str:
+    return "\n\n".join(COPY[key])
 
 
 def menu_action(value: str) -> str | None:
@@ -197,22 +196,19 @@ def greeting(value: str) -> tuple[str, str] | None:
     return None
 
 
-def main_keyboard(language: str) -> ReplyKeyboardMarkup:
-    index = 1 if language == "ru" else 0
-    buttons = {key: KeyboardButton(text=labels[index]) for key, labels in MENU.items()}
+def main_keyboard() -> ReplyKeyboardMarkup:
+    buttons = {key: KeyboardButton(text=labels[0]) for key, labels in MENU.items()}
     return ReplyKeyboardMarkup(
-        keyboard=[[buttons["examples"], buttons["help"]], [buttons["language"], buttons["reset"]]],
+        keyboard=[[buttons["examples"], buttons["help"]], [buttons["reset"]]],
         resize_keyboard=True,
         is_persistent=True,
-        input_field_placeholder="Savolingizni yozing" if language == "uz" else "Задайте вопрос",
+        input_field_placeholder="Savolingizni yozing / Задайте вопрос",
     )
 
 
 def telegram_html(value: str) -> str:
     titles = {
         "UZEX21",
-        "Menyu",
-        "Меню",
         "Yordam",
         "Помощь",
         "Misollar",

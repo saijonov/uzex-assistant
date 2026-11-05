@@ -16,7 +16,7 @@ class State:
             PRAGMA journal_mode=WAL;
             CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS chats (
-                chat_id INTEGER PRIMARY KEY, language TEXT, history TEXT NOT NULL DEFAULT '[]'
+                chat_id INTEGER PRIMARY KEY, history TEXT NOT NULL DEFAULT '[]'
             );
             CREATE TABLE IF NOT EXISTS pending_questions (
                 chat_id INTEGER PRIMARY KEY, body TEXT NOT NULL
@@ -113,12 +113,7 @@ class State:
         with self.db:
             self.db.execute("INSERT OR IGNORE INTO chats(chat_id) VALUES(?)", (chat_id,))
         row = self.db.execute("SELECT * FROM chats WHERE chat_id=?", (chat_id,)).fetchone()
-        return {"language": row["language"], "history": json.loads(row["history"])}
-
-    def language(self, chat_id: int, language: str):
-        self.chat(chat_id)
-        with self.db:
-            self.db.execute("UPDATE chats SET language=? WHERE chat_id=?", (language, chat_id))
+        return {"history": json.loads(row["history"])}
 
     def remember(self, chat_id: int, question: str, answer: str):
         chat = self.chat(chat_id)

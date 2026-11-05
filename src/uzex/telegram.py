@@ -25,7 +25,7 @@ from aiogram.types import (
 from uzex.config import Settings, require_credentials
 from uzex.downloads import requested_source_file, source_csv
 from uzex.engine import Engine, guess_language
-from uzex.interface import greeting, main_keyboard, menu_action, telegram_html
+from uzex.interface import both, greeting, main_keyboard, menu_action, telegram_html
 from uzex.interface import text as ui_text
 from uzex.models import Answer
 from uzex.policy import (
@@ -52,17 +52,6 @@ from uzex.render import (
 from uzex.state import State
 
 logger = logging.getLogger(__name__)
-
-
-def language_keyboard():
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(text="O‘zbekcha", callback_data="lang:uz"),
-                InlineKeyboardButton(text="Русский", callback_data="lang:ru"),
-            ]
-        ]
-    )
 
 
 def pagination_keyboard(job_id: str, language: str, row_count: int, page: int = 0):
@@ -119,26 +108,17 @@ class Service:
                 await self.bot.send_chat_action(chat_id, "typing", request_timeout=3)
             await asyncio.sleep(4)
 
-    async def publish_commands(self, language: str, chat_id: int | None = None):
-        commands = [
-            ("start", ("Boshlash", "Начало")),
-            ("menu", ("Menyu", "Меню")),
-            ("examples", ("Savol namunalari", "Примеры вопросов")),
-            ("help", ("Yordam", "Помощь")),
-            ("language", ("Tilni o‘zgartirish", "Сменить язык")),
-            ("reset", ("Yangi suhbat", "Новый диалог")),
-        ]
-        options = (
-            {"scope": BotCommandScopeChat(chat_id=chat_id)}
-            if chat_id is not None
-            else {"language_code": language}
-        )
+    async def publish_commands(self):
+        for language_code in ("uz", "ru"):
+            await self.bot.delete_my_commands(language_code=language_code)
         await self.bot.set_my_commands(
             [
-                BotCommand(command=command, description=tr(labels, language))
-                for command, labels in commands
-            ],
-            **options,
+                BotCommand(command="start", description="Boshlash / Начало"),
+                BotCommand(command="menu", description="Menyu / Меню"),
+                BotCommand(command="examples", description="Savol namunalari / Примеры вопросов"),
+                BotCommand(command="help", description="Yordam / Помощь"),
+                BotCommand(command="reset", description="Yangi suhbat / Новый диалог"),
+            ]
         )
 
     async def poll(self):
@@ -159,9 +139,6 @@ class Service:
                                 "type": "message",
                                 "text": update.message.text,
                                 "message_id": update.message.message_id,
-                                "language_code": update.message.from_user.language_code
-                                if update.message.from_user
-                                else None,
                             },
                         )
                     elif update.callback_query and update.callback_query.message:
@@ -177,7 +154,6 @@ class Service:
                                 "type": "callback",
                                 "data": callback.data,
                                 "callback_id": callback.id,
-                                "language_code": callback.from_user.language_code,
                                 "acknowledged": acknowledged,
                             },
                         )
@@ -199,36 +175,21 @@ class Service:
         chat_id = job["chat_id"]
         chat = self.state.chat(chat_id)
         pending = self.state.pending(chat_id)
-        language = (
-            chat["language"]
-            if chat["language"] in {"uz", "ru"}
-            else ("ru" if (payload.get("language_code") or "").startswith("ru") else "uz")
-        )
         if payload["type"] == "callback":
             if not payload.get("acknowledged"):
                 with contextlib.suppress(TelegramAPIError):
                     await self.bot.answer_callback_query(payload["callback_id"])
             action, _, key = (payload.get("data") or "").partition(":")
-            if action == "lang" and key in {"uz", "ru", "auto"}:
-                language = key if key in {"uz", "ru"} else language
-                self.state.language(chat_id, language)
-                with contextlib.suppress(TelegramAPIError):
-                    await self.publish_commands(language, chat_id)
-                return {
-                    "texts": [ui_text("ready", language)],
-                    "menu_at": 0,
-                    "ui_language": language,
-                }
             page = 0
             if action == "page":
                 key, _, page_value = key.rpartition(":")
                 if not page_value.isdecimal() or len(page_value) > 5:
-                    return {"texts": [ui_text("expired", language)]}
+                    return {"texts": [both("expired")]}
                 page = int(page_value)
             answer = self.state.answer_for(key, chat_id)
             if answer and answer.evidence and action == "page":
                 if page > max((len(answer.evidence.rows) - 1) // 10, 0):
-                    return {"texts": [ui_text("expired", language)]}
+                    return {"texts": [both("expired")]}
                 return {
                     "texts": split_text(render_answer(answer, page)),
                     "answer": answer.model_dump(mode="json"),
@@ -243,52 +204,33 @@ class Service:
                     "csv_answer": answer.model_dump(mode="json"),
                     "caption": csv_caption(answer),
                 }
-            return {"texts": [ui_text("expired", language)]}
+            return {"texts": [both("expired")]}
         text = (payload.get("text") or "").strip()
         if not text:
-            return {
-                "texts": [ui_text("text_only", language)],
-                "menu_at": 0,
-                "ui_language": language,
-            }
+            return {"texts": [both("text_only")], "menu_at": 0}
         command = text.split()[0].split("@")[0].lower()
         action = menu_action(text)
         if action:
             command = "/" + action
         if command == "/start":
             with contextlib.suppress(TelegramAPIError):
-                await self.publish_commands(language, chat_id)
-            if chat["language"] in {"uz", "ru"}:
-                return {
-                    "texts": [ui_text("intro", language) + "\n\n" + ui_text("ready", language)],
-                    "menu_at": 0,
-                    "ui_language": language,
-                }
-            return {
-                "texts": [ui_text("intro", language), ui_text("choose_language", language)],
-                "menu_at": 0,
-                "language_keyboard": True,
-                "ui_language": language,
-            }
-        if command in {"/help", "/examples", "/menu"}:
-            return {
-                "texts": [ui_text(command[1:], language)],
-                "menu_at": 0,
-                "ui_language": language,
-            }
-        if command == "/language":
-            return {"texts": [ui_text("choose_language", language)], "language_keyboard": True}
+                await self.bot.delete_my_commands(scope=BotCommandScopeChat(chat_id=chat_id))
+            return {"texts": [both("start")], "menu_at": 0}
+        if command == "/menu":
+            return {"texts": [both("start")], "menu_at": 0}
+        if command in {"/help", "/examples"}:
+            return {"texts": [both(command[1:])], "menu_at": 0}
         if command == "/reset":
             self.state.reset(chat_id)
-            return {"texts": [ui_text("reset", language)], "menu_at": 0, "ui_language": language}
+            return {"texts": [both("reset")], "menu_at": 0}
         if command.startswith("/"):
-            return {"texts": [ui_text("help", language)], "menu_at": 0, "ui_language": language}
+            return {"texts": [both("help")], "menu_at": 0}
         if len(text) > 6000:
-            return {"texts": [ui_text("shorten", language)]}
+            return {"texts": [ui_text("shorten", guess_language(text))]}
         hello = greeting(text)
         if hello:
             key, reply_language = hello
-            return {"texts": [ui_text(key, reply_language)], "menu_at": 0, "ui_language": language}
+            return {"texts": [ui_text(key, reply_language)], "menu_at": 0}
         if asks_for_options(text):
             reply_language = guess_language(text)
             if pending:
@@ -463,17 +405,14 @@ class Service:
         for index in range(job["next_part"], len(texts)):
             markup = None
             if result.get("menu_at") == index:
-                markup = main_keyboard(result["ui_language"])
-            if index == len(texts) - 1:
-                if result.get("language_keyboard"):
-                    markup = language_keyboard()
-                elif answer and answer.evidence:
-                    markup = pagination_keyboard(
-                        result.get("source_job_id", job["id"]),
-                        answer.language,
-                        len(answer.evidence.rows),
-                        result.get("page", 0),
-                    )
+                markup = main_keyboard()
+            if index == len(texts) - 1 and answer and answer.evidence:
+                markup = pagination_keyboard(
+                    result.get("source_job_id", job["id"]),
+                    answer.language,
+                    len(answer.evidence.rows),
+                    result.get("page", 0),
+                )
             await self.bot.send_message(
                 job["chat_id"], telegram_html(texts[index]), reply_markup=markup, parse_mode="HTML"
             )
@@ -564,16 +503,7 @@ async def run_bot(settings: Settings):
             if webhook.url:
                 raise RuntimeError("A webhook is configured; remove it before starting polling")
             service = Service(bot, state, engine)
-            await service.publish_commands("uz")
-            await service.publish_commands("ru")
-            await bot.set_my_commands(
-                [
-                    BotCommand(command="start", description="Boshlash / Начало"),
-                    BotCommand(command="menu", description="Menyu / Меню"),
-                    BotCommand(command="language", description="Til / Язык"),
-                    BotCommand(command="help", description="Yordam / Помощь"),
-                ]
-            )
+            await service.publish_commands()
             loop = asyncio.get_running_loop()
             for sig in (signal.SIGINT, signal.SIGTERM):
                 loop.add_signal_handler(sig, service.stopping.set)

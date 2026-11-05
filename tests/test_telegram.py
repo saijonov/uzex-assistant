@@ -11,6 +11,7 @@ class FakeBot:
     def __init__(self):
         self.messages = []
         self.commands = []
+        self.deleted_commands = []
         self.documents = []
         self.actions = []
 
@@ -26,6 +27,9 @@ class FakeBot:
     async def set_my_commands(self, commands, **kwargs):
         self.commands.append((commands, kwargs))
 
+    async def delete_my_commands(self, **kwargs):
+        self.deleted_commands.append(kwargs)
+
     async def send_document(self, chat_id, document, **kwargs):
         self.documents.append({"chat_id": chat_id, "document": document, **kwargs})
 
@@ -40,14 +44,14 @@ def message_job(text, chat_id=1):
     }
 
 
-async def test_welcome_and_language_work_without_model(tmp_path, sample_database):
+async def test_welcome_and_menu_work_without_model(tmp_path, sample_database):
     bot = FakeBot()
     state = State(tmp_path / "state.db")
     service = Service(bot, state, Engine(Settings(_env_file=None), database=sample_database))
     result = await service.prepare(message_job("/start"))
     assert "UZEX21" in result["texts"][0]
-    result = await service.prepare(message_job("/language"))
-    assert result["language_keyboard"]
+    result = await service.prepare(message_job("/menu"))
+    assert "UZEX21" in result["texts"][0]
     assert state.chat(1)["history"] == []
     state.close()
 
@@ -95,7 +99,6 @@ async def test_source_callback_cannot_access_another_chat(tmp_path, sample_datab
                 "type": "callback",
                 "data": "sources:" + job["id"],
                 "callback_id": "c",
-                "language_code": "ru",
             }
         ),
     }

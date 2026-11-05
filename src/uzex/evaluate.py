@@ -106,6 +106,9 @@ class RecordingBot:
     async def set_my_commands(self, *args, **kwargs):
         pass
 
+    async def delete_my_commands(self, *args, **kwargs):
+        pass
+
     async def answer_callback_query(self, *args, **kwargs):
         pass
 

@@ -1,6 +1,5 @@
 import csv
 import io
-import json
 
 import pytest
 from test_engine import ScriptedClient, finish
@@ -8,7 +7,7 @@ from test_telegram import FakeBot, message_job
 
 from uzex.config import Settings
 from uzex.engine import Engine
-from uzex.interface import COPY, MENU, main_keyboard, telegram_html
+from uzex.interface import COPY, MENU, both, main_keyboard, telegram_html
 from uzex.models import Answer
 from uzex.render import LABELS, TEXT, export_csv, render_answer, split_text
 from uzex.state import State
@@ -20,51 +19,70 @@ def make_service(tmp_path, sample_database, client=None):
     return Service(FakeBot(), state, Engine(Settings(_env_file=None), client, sample_database))
 
 
-async def test_first_start_has_picker_and_persistent_menu(tmp_path, sample_database):
+async def test_start_greets_in_both_languages_without_asking_for_one(tmp_path, sample_database):
     service = make_service(tmp_path, sample_database)
-    service.state.enqueue(1, 1, {"type": "message", "text": "/start", "language_code": "ru"})
+    service.state.enqueue(1, 1, {"type": "message", "text": "/start"})
     job = service.state.claim()
     result = await service.prepare(job)
     service.state.save_result(job["id"], result)
     await service.deliver(job, result)
-    first, second = service.bot.messages
-    assert "<b>UZEX21</b>" in first["text"]
-    assert "Задавайте" in first["text"]
-    assert first["reply_markup"].is_persistent
-    assert first["reply_markup"].keyboard[0][0].text == "Примеры"
-    assert second["reply_markup"].inline_keyboard[0][0].callback_data == "lang:uz"
-    assert len(second["reply_markup"].inline_keyboard[0]) == 2
-    assert service.state.chat(1)["language"] is None
+    assert len(service.bot.messages) == 1
+    message = service.bot.messages[0]
+    assert "<b>UZEX21</b>" in message["text"]
+    assert "so‘rang" in message["text"] and "Задавайте" in message["text"]
+    assert message["reply_markup"].is_persistent
     service.state.close()
 
 
-async def test_changing_menu_language_preserves_conversation(tmp_path, sample_database):
+def test_keyboard_offers_every_action_in_both_languages_and_no_language_button():
+    keyboard = main_keyboard()
+    labels = [button.text for row in keyboard.keyboard for button in row]
+    assert labels == ["Misollar / Примеры", "Yordam / Помощь", "Yangi suhbat / Новый диалог"]
+
+
+async def test_start_removes_the_language_command_saved_for_the_chat(tmp_path, sample_database):
     service = make_service(tmp_path, sample_database)
-    service.state.remember(1, "Кто продавец?", "Ответ")
-    before = service.state.chat(1)["history"]
-    result = await service.prepare(
-        {
-            "chat_id": 1,
-            "payload": json.dumps({"type": "callback", "data": "lang:uz", "callback_id": "c"}),
-        }
-    )
-    assert service.state.chat(1)["language"] == "uz"
-    assert service.state.chat(1)["history"] == before
-    assert result["ui_language"] == "uz"
-    assert service.bot.commands[0][1]["scope"].chat_id == 1
+    await service.prepare(message_job("/start"))
+    assert service.bot.deleted_commands[0]["scope"].chat_id == 1
+    service.state.close()
+
+
+async def test_commands_are_published_once_without_a_language_command(tmp_path, sample_database):
+    service = make_service(tmp_path, sample_database)
+    await service.publish_commands()
+    assert [item["language_code"] for item in service.bot.deleted_commands] == ["uz", "ru"]
+    assert len(service.bot.commands) == 1
+    published, options = service.bot.commands[0]
+    assert options == {}
+    assert [command.command for command in published] == [
+        "start",
+        "menu",
+        "examples",
+        "help",
+        "reset",
+    ]
+    service.state.close()
+
+
+async def test_the_old_language_command_only_shows_the_menu(tmp_path, sample_database):
+    service = make_service(tmp_path, sample_database)
+    result = await service.prepare(message_job("/language"))
+    assert "answer" not in result
+    assert result["menu_at"] == 0
+    assert "language_keyboard" not in result
     service.state.close()
 
 
 @pytest.mark.parametrize(
-    "menu_language,question,answer_language",
+    "question,answer_language",
     [
-        ("uz", "Кто продавец по сделке 100001?", "ru"),
-        ("ru", "100001-bitimning sotuvchisi kim?", "uz"),
-        ("uz", "Ответь на узбекском: кто продавец по сделке 100001?", "uz"),
+        ("Кто продавец по сделке 100001?", "ru"),
+        ("100001-bitimning sotuvchisi kim?", "uz"),
+        ("Ответь на узбекском: кто продавец по сделке 100001?", "uz"),
     ],
 )
-async def test_menu_language_does_not_force_answer_language(
-    tmp_path, sample_database, menu_language, question, answer_language
+async def test_the_question_alone_decides_the_answer_language(
+    tmp_path, sample_database, question, answer_language
 ):
     end = finish()
     end[1]["language"] = answer_language
@@ -75,51 +93,58 @@ async def test_menu_language_does_not_force_answer_language(
         ]
     )
     service = make_service(tmp_path, sample_database, client)
-    service.state.language(1, menu_language)
     result = await service.prepare(message_job(question))
     assert result["answer"]["language"] == answer_language
-    assert service.state.chat(1)["language"] == menu_language
     assert "override from the caller is: none" in client.requests[0]["instructions"]
     service.state.close()
 
 
-async def test_direct_question_works_without_language_selection(tmp_path, sample_database):
-    client = ScriptedClient(
-        [
-            ("query_registry", {"sql": "SELECT seller_name FROM registry WHERE deal_id='100001'"}),
-            finish(),
-        ]
-    )
-    service = make_service(tmp_path, sample_database, client)
-    result = await service.prepare(message_job("Кто продавец по сделке 100001?"))
-    assert result["answer"]["outcome"] == "answer"
-    assert service.state.chat(1)["language"] is None
-    service.state.close()
-
-
-@pytest.mark.parametrize("button", ["Misollar", "Примеры", "Yordam", "Помощь", "Menyu"])
+@pytest.mark.parametrize(
+    "button",
+    [
+        "Misollar / Примеры",
+        "Yordam / Помощь",
+        "Misollar",
+        "Примеры",
+        "Yordam",
+        "Помощь",
+        "Til",
+        "Язык",
+        "/menu",
+    ],
+)
 async def test_menu_does_not_call_model(tmp_path, sample_database, button):
     service = make_service(tmp_path, sample_database)
-    value = "/menu" if button == "Menyu" else button
-    result = await service.prepare(message_job(value))
+    result = await service.prepare(message_job(button))
     assert "answer" not in result
     assert result["menu_at"] == 0
     service.state.close()
 
 
-async def test_reset_clears_history_but_keeps_menu_language(tmp_path, sample_database):
+async def test_menu_replies_come_in_both_languages(tmp_path, sample_database):
     service = make_service(tmp_path, sample_database)
-    service.state.language(1, "ru")
+    examples = await service.prepare(message_job("Misollar / Примеры"))
+    assert "100001-bitimning" in examples["texts"][0]
+    assert "по сделке 100001" in examples["texts"][0]
+    support = await service.prepare(message_job("Yordam / Помощь"))
+    assert "Yordam" in support["texts"][0] and "Помощь" in support["texts"][0]
+    assert "tilini" not in support["texts"][0] and "Язык меню" not in support["texts"][0]
+    service.state.close()
+
+
+async def test_reset_clears_history(tmp_path, sample_database):
+    service = make_service(tmp_path, sample_database)
     service.state.remember(1, "q", "a")
-    await service.prepare(message_job("Новый диалог"))
-    assert service.state.chat(1) == {"language": "ru", "history": []}
+    result = await service.prepare(message_job("Yangi suhbat / Новый диалог"))
+    assert service.state.chat(1) == {"history": []}
+    assert "Yangi suhbat" in result["texts"][0] and "Новый диалог" in result["texts"][0]
     service.state.close()
 
 
 async def test_whitespace_is_handled_without_retry_loop(tmp_path, sample_database):
     service = make_service(tmp_path, sample_database)
     result = await service.prepare(message_job("   \n "))
-    assert result["texts"] == [COPY["text_only"][0]]
+    assert result["texts"] == [both("text_only")]
     service.state.close()
 
 
@@ -210,6 +235,5 @@ def test_authored_messages_have_no_long_dashes():
     for mapping in (COPY, MENU, TEXT, LABELS):
         for pair in mapping.values():
             assert all("—" not in value and "–" not in value for value in pair)
-    for language in ("uz", "ru"):
-        keyboard = main_keyboard(language)
-        assert keyboard.is_persistent and keyboard.resize_keyboard
+    keyboard = main_keyboard()
+    assert keyboard.is_persistent and keyboard.resize_keyboard

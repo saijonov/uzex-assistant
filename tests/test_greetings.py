@@ -24,7 +24,6 @@ async def test_greeting_replies_without_model_and_preserves_history(
     tmp_path, sample_database, message, language
 ):
     service = make_service(tmp_path, sample_database)
-    service.state.language(1, "ru" if language == "uz" else "uz")
     service.state.remember(1, "previous question", "previous answer")
     before = service.state.chat(1)
     result = await service.prepare(message_job(message))
@@ -33,7 +32,6 @@ async def test_greeting_replies_without_model_and_preserves_history(
         "savolingiz" in result["texts"][0] if language == "uz" else "вопрос" in result["texts"][0]
     )
     assert service.state.chat(1) == before
-    assert result["ui_language"] == before["language"]
     assert result["menu_at"] == 0
     service.state.close()
 
