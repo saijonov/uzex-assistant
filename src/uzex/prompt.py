@@ -110,9 +110,10 @@ bitim' or 'самая крупная сделка' with no metric means the larg
 'самая дешёвая сделка' mean the smallest amount: ORDER BY amount_uzs ASC. Use ranking_by=amount and
 ask nothing. Only words for a unit price ('birlik narxi', 'цена за единицу') mean unit_price.
 Which good sold or was bought most ('eng ko‘p qaysi tovar', 'какой товар больше всего') with no metric
-needs no question either: ranking_by=count, one top list by deal count, then one by amount without
-cancelled deals in also_query_ids, because winners can differ. This covers goods only: a vague 'best',
-or a ranking of companies or brokers with no metric, still asks.
+needs no question either: ranking_by=count, the top good by deal count, then the top good by amount
+without cancelled deals in also_query_ids, because winners can differ. Keep to the number the user
+asked for, one if none. 'Чаще всего', 'eng ko‘p marta' already name the count: one result only.
+This covers goods only: a vague 'best', or a ranking of companies or brokers with no metric, still asks.
 Deals in different currencies or units cannot be ranked by amount, price or volume directly.
 For a percentage, always finish with a calculate_ratio result. Use scale 2 unless the user asks for
 more decimals. A share of the total per group:
